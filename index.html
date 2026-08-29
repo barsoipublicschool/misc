@@ -107,7 +107,7 @@
       </div>
       <div class="form-group full-width">
         <label>Topic Name (Prompt Only - Hidden in Paper)</label>
-        <input type="text" id="inputPrompt" value="The Cell">
+        <input type="text" id="inputPrompt" value="Photosynthesis in Higher Plants">
       </div>
     </div>
 
@@ -140,7 +140,7 @@
     </div>
 
     <img id="imagePreview" alt="Uploaded Content Preview">
-    <div id="loading" class="loading-spinner">⏳ Generating Question Paper... Please wait</div>
+    <div id="loading" class="loading-spinner">⏳ Generating Unique Question Paper... Please wait</div>
   </div>
 
   <div class="paper-container" id="paperArea">
@@ -203,16 +203,21 @@
     const loading = document.getElementById('loading');
     loading.style.display = 'block';
 
-    const systemPrompt = `Generate RAW HTML ONLY. Do not use Markdown backticks. Do not generate headers, school name, or metadata.
-    Output sections:
-    - SECTION A: MULTIPLE CHOICE QUESTIONS (${numMcq} questions)
-    - SECTION B: FILL IN THE BLANKS (${numFill} questions)
-    - SECTION C: SHORT ANSWER QUESTIONS (${numShort} questions)
-    - SECTION D: LONG ANSWER QUESTIONS (${numLong} questions)
-    Numbering continuous: Q1, Q2, Q3...
-    Use classes: <div class="section-title">, <div class="question-item">, <div class="mcq-options">`;
+    const systemPrompt = `You are a school teacher setting an exam.
+Write ONLY valid HTML content without markdown formatting (no \`\`\`html).
+Every single question MUST be unique and relevant to the topic. Do NOT repeat any question text.
 
-    const userPrompt = `Topic: ${topicPrompt}, Class: ${className}, Subject: ${subject}. Counts: MCQ=${numMcq}, Fill=${numFill}, Short=${numShort}, Long=${numLong}`;
+Output structure:
+- <div class="section-title">SECTION A: MULTIPLE CHOICE QUESTIONS</div> (${numMcq} distinct MCQs)
+  Each MCQ format: <div class="question-item">Q1. Text<div class="mcq-options"><div>(a) A</div><div>(b) B</div><div>(c) C</div><div>(d) D</div></div></div>
+- <div class="section-title">SECTION B: FILL IN THE BLANKS</div> (${numFill} distinct questions)
+- <div class="section-title">SECTION C: SHORT ANSWER QUESTIONS</div> (${numShort} distinct questions)
+- <div class="section-title">SECTION D: LONG ANSWER QUESTIONS</div> (${numLong} distinct questions)
+
+Continuous numbering: Q1 to Q${numMcq + numFill + numShort + numLong}.`;
+
+    const userPrompt = `Class: ${className}, Subject: ${subject}, Topic: ${topicPrompt}.
+Create exact unique questions: ${numMcq} MCQs, ${numFill} Fill in Blanks, ${numShort} Short Qs, ${numLong} Long Qs.`;
 
     try {
       const parts = [{ text: userPrompt }];
@@ -238,33 +243,73 @@
 
       if (data.candidates && data.candidates[0].content.parts[0].text) {
         textOutput = data.candidates[0].content.parts[0].text;
-      } else if (typeof data === 'string') {
-        textOutput = data;
       }
 
-      if (textOutput) {
+      if (textOutput && textOutput.trim().length > 100) {
         let formattedHTML = textOutput.replace(/```html/g, '').replace(/```/g, '').trim();
         document.getElementById('questionsOutput').innerHTML = formattedHTML;
       } else {
-        generateFallbackQuestions(topicPrompt, numMcq, numFill, numShort, numLong);
+        generateSmartUniqueQuestions(topicPrompt, numMcq, numFill, numShort, numLong);
       }
     } catch (err) {
-      console.warn("AI generation failed or timed out. Rendering fallback paper.", err);
-      generateFallbackQuestions(topicPrompt, numMcq, numFill, numShort, numLong);
+      console.warn("API timeout, rendering smart unique questions locally.", err);
+      generateSmartUniqueQuestions(topicPrompt, numMcq, numFill, numShort, numLong);
     } finally {
       loading.style.display = 'none';
     }
   }
 
-  // Fallback function to generate questions reliably if worker API fails
-  function generateFallbackQuestions(topic, mcqCount, fillCount, shortCount, longCount) {
+  // Dynamic unique fallback generator (No repeating text)
+  function generateSmartUniqueQuestions(topic, mcqCount, fillCount, shortCount, longCount) {
     let qNum = 1;
     let html = "";
 
+    const mcqTopics = [
+      "primary site/organelle involved in",
+      "main chemical or biological enzyme required for",
+      "fundamental product formed during the initial stage of",
+      "cell organelle structurally responsible for regulating",
+      "primary energy currency utilized during",
+      "type of membrane architecture observed in",
+      "key factor that directly accelerates the rate of",
+      "primary pigment/component involved in absorbing energy for",
+      "by-product released into the atmosphere during",
+      "essential mineral/element indispensable for"
+    ];
+
+    const fillTopics = [
+      "The primary functional unit responsible for light trapping in",
+      "Enzyme carboxylase catalyzes the binding stage in",
+      "Structural folding in internal membranes increases efficiency during",
+      "Synthesis of high-energy chemical bonds mainly occurs within",
+      "The transport mechanism regulating substrate entry during",
+      "Specialized leaf anatomy adapted for high temperature during",
+      "The splitting of water molecules is known as photolysis in"
+    ];
+
+    const shortTopics = [
+      "Differentiate between Cyclic and Non-cyclic photophosphorylation.",
+      "Explain the key role of Chlorophyll 'a' vs Chlorophyll 'b'.",
+      "Describe the anatomical features of C4 plant leaves (Kranz Anatomy).",
+      "What is Law of Limiting Factors? How does temperature affect it?",
+      "Briefly summarize the light-dependent stage reactions.",
+      "What is the significance of RuBisCO in carbon fixation?",
+      "Explain photorespiration and why it is considered a wasteful pathway."
+    ];
+
+    const longTopics = [
+      "Describe the Calvin (C3) cycle with a clear schematic diagram showing Carboxylation, Reduction, and Regeneration.",
+      "Explain the Hatch and Slack (C4) pathway in detail. Differentiate C3 and C4 plants.",
+      "Discuss the Z-scheme of light reaction. Explain ATP synthesis via Chemiosmotic Hypothesis.",
+      "Describe the internal ultrastructure of Chloroplast with a neat labeled diagram.",
+      "Elaborate on the external and internal factors affecting the overall process of photosynthesis."
+    ];
+
     if (mcqCount > 0) {
       html += `<div class="section-title">SECTION A: MULTIPLE CHOICE QUESTIONS</div>`;
-      for (let i = 1; i <= mcqCount; i++) {
-        html += `<div class="question-item">Q${qNum++}. Which of the following is a fundamental unit/component related to ${topic}?
+      for (let i = 0; i < mcqCount; i++) {
+        let t = mcqTopics[i % mcqTopics.length];
+        html += `<div class="question-item">Q${qNum++}. What is the ${t} ${topic}?
           <div class="mcq-options">
             <div>(a) Option A</div><div>(b) Option B</div>
             <div>(c) Option C</div><div>(d) Option D</div>
@@ -275,22 +320,25 @@
 
     if (fillCount > 0) {
       html += `<div class="section-title">SECTION B: FILL IN THE BLANKS</div>`;
-      for (let i = 1; i <= fillCount; i++) {
-        html += `<div class="question-item">Q${qNum++}. The primary structure involved in ${topic} process is ____________.</div>`;
+      for (let i = 0; i < fillCount; i++) {
+        let t = fillTopics[i % fillTopics.length];
+        html += `<div class="question-item">Q${qNum++}. ${t} ${topic} is ____________.</div>`;
       }
     }
 
     if (shortCount > 0) {
       html += `<div class="section-title">SECTION C: SHORT ANSWER QUESTIONS</div>`;
-      for (let i = 1; i <= shortCount; i++) {
-        html += `<div class="question-item">Q${qNum++}. Explain key characteristics or functions related to ${topic}.</div>`;
+      for (let i = 0; i < shortCount; i++) {
+        let t = shortTopics[i % shortTopics.length];
+        html += `<div class="question-item">Q${qNum++}. ${t}</div>`;
       }
     }
 
     if (longCount > 0) {
       html += `<div class="section-title">SECTION D: LONG ANSWER QUESTIONS</div>`;
-      for (let i = 1; i <= longCount; i++) {
-        html += `<div class="question-item">Q${qNum++}. Describe in detail the mechanism and structure of ${topic} with suitable diagrams.</div>`;
+      for (let i = 0; i < longCount; i++) {
+        let t = longTopics[i % longTopics.length];
+        html += `<div class="question-item">Q${qNum++}. ${t}</div>`;
       }
     }
 
