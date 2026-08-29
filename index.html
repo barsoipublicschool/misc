@@ -10,56 +10,66 @@
 
   <style>
     * { box-sizing: border-box; font-family: 'Times New Roman', Times, serif; }
-    body { background: #eef2f5; margin: 0; padding: 20px; color: #333; }
+    body { background: #eef2f5; margin: 0; padding: 15px; color: #111; }
 
     .control-panel {
       max-width: 800px;
       margin: 0 auto 20px auto;
       background: white;
-      padding: 20px;
+      padding: 18px;
       border-radius: 8px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
-    .control-panel h2 { margin-top: 0; color: #004085; font-size: 20px; }
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
+    .control-panel h2 { margin-top: 0; color: #004085; font-size: 18px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
     .form-group { display: flex; flex-direction: column; }
-    .form-group label { font-size: 13px; font-weight: bold; margin-bottom: 4px; }
-    .form-group input, .form-group select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+    .form-group label { font-size: 12px; font-weight: bold; margin-bottom: 3px; }
+    .form-group input { padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
     .full-width { grid-column: span 2; }
 
-    .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
-    .btn { padding: 10px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .btn { padding: 8px 14px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; display: inline-flex; align-items: center; gap: 5px; }
     .btn-primary { background: #004085; color: white; }
     .btn-success { background: #28a745; color: white; }
     .btn-secondary { background: #6c757d; color: white; }
     .btn:hover { opacity: 0.9; }
 
     #fileInput { display: none; }
-    #imagePreview { max-height: 80px; display: none; margin-top: 10px; border-radius: 4px; }
+    #imagePreview { max-height: 60px; display: none; margin-top: 8px; border-radius: 4px; }
 
-    /* Paper Print Styling */
+    /* Strict A4 Single Page Paper Styling */
     .paper-container {
-      max-width: 800px;
+      width: 210mm;
+      min-height: 295mm;
+      max-height: 295mm;
       margin: 0 auto;
       background: white;
-      padding: 40px;
+      padding: 15mm 15mm 10mm 15mm;
       box-shadow: 0 0 10px rgba(0,0,0,0.15);
-      min-height: 1000px;
+      overflow: hidden;
+      box-sizing: border-box;
     }
 
-    .school-title { text-align: center; font-size: 24px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; }
-    .exam-title { text-align: center; font-size: 17px; font-weight: bold; margin-bottom: 12px; text-transform: uppercase; }
+    .school-title { text-align: center; font-size: 20px; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
+    .exam-title { text-align: center; font-size: 14px; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; }
 
-    .meta-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 15px; margin-bottom: 6px; }
-    .instruction { font-style: italic; font-weight: bold; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 4px 0; margin: 12px 0 20px 0; text-align: center; }
+    .meta-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; margin-bottom: 4px; }
+    .instruction { font-style: italic; font-weight: bold; font-size: 12px; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 2px 0; margin: 6px 0 12px 0; text-align: center; }
 
-    .section-title { font-weight: bold; font-size: 15px; margin-top: 20px; margin-bottom: 10px; text-transform: uppercase; }
-    .question-item { margin-bottom: 12px; font-size: 15px; line-height: 1.5; }
-    .mcq-options { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-left: 20px; margin-top: 4px; }
+    /* Compact Question Styling for Single Page Fit */
+    .section-title { font-weight: bold; font-size: 12px; margin-top: 10px; margin-bottom: 6px; text-transform: uppercase; background: #f0f0f0; padding: 2px 4px; }
+    .question-item { margin-bottom: 6px; font-size: 12px; line-height: 1.35; }
+    .mcq-options { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; margin-left: 15px; margin-top: 2px; font-size: 11.5px; }
     
-    .loading-spinner { display: none; color: #004085; font-weight: bold; margin-top: 10px; }
+    .loading-spinner { display: none; color: #004085; font-weight: bold; margin-top: 8px; font-size: 13px; }
+
+    @media print {
+      body { padding: 0; background: white; }
+      .control-panel { display: none; }
+      .paper-container { box-shadow: none; margin: 0; width: 100%; height: 100vh; padding: 12mm; }
+    }
   </style>
 </head>
 <body>
@@ -75,11 +85,11 @@
       </div>
       <div class="form-group">
         <label>Class</label>
-        <input type="text" id="inputClass" value="Class - VIII">
+        <input type="text" id="inputClass" value="Class - XI">
       </div>
       <div class="form-group">
         <label>Subject</label>
-        <input type="text" id="inputSubject" value="Science">
+        <input type="text" id="inputSubject" value="Science (Biology)">
       </div>
       <div class="form-group">
         <label>Full Marks (FM)</label>
@@ -90,8 +100,8 @@
         <input type="text" id="inputTime" value="2 hrs.">
       </div>
       <div class="form-group full-width">
-        <label>Topic / Instructions for AI (Optional)</label>
-        <input type="text" id="inputPrompt" placeholder="e.g. Chapter 1 to 5, focus on Photosynthesis and Cell Structure">
+        <label>Topic Name (Frontend / Prompt Only - Hidden in Print Paper)</label>
+        <input type="text" id="inputPrompt" value="THE CELL - THE UNIT OF LIFE">
       </div>
     </div>
 
@@ -100,58 +110,68 @@
       <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)">
       
       <button class="btn btn-primary" onclick="generateQuestionPaper()">⚡ Generate Paper with AI</button>
-      <button class="btn btn-success" onclick="downloadPDF()">📄 Download PDF</button>
+      <button class="btn btn-success" onclick="downloadPDF()">📄 Download PDF (A4 Page)</button>
     </div>
 
     <img id="imagePreview" alt="Uploaded Content Preview">
-    <div id="loading" class="loading-spinner">⏳ Generating Question Paper, please wait...</div>
+    <div id="loading" class="loading-spinner">⏳ Generating Question Paper... Please wait</div>
   </div>
 
-  <!-- Printable Paper Format -->
+  <!-- Printable Paper Format (Guaranteed 1 Page A4) -->
   <div class="paper-container" id="paperArea">
     
     <!-- Top Heading -->
     <div class="school-title">BARSOI PUBLIC SCHOOL</div>
     
-    <!-- First Row: Exam Name (Centered) -->
+    <!-- First Row: Exam Name -->
     <div class="exam-title" id="dispExam">ANNUAL EXAMINATION - 2026</div>
 
-    <!-- Second Row: FM (Left) | Time (Right) -->
+    <!-- Second Row: FM | Time -->
     <div class="meta-row">
       <span>FM - <span id="dispFM">100</span></span>
       <span>Time - <span id="dispTime">2 hrs.</span></span>
     </div>
 
-    <!-- Third Row: Class (Left) | Subject (Right) -->
+    <!-- Third Row: Class | Subject -->
     <div class="meta-row">
-      <span><span id="dispClass">Class - VIII</span></span>
-      <span>Subject - <span id="dispSubject">Science</span></span>
+      <span><span id="dispClass">Class - XI</span></span>
+      <span>Subject - <span id="dispSubject">Science (Biology)</span></span>
     </div>
 
     <!-- Instruction Line -->
     <div class="instruction">All questions are compulsory.</div>
 
-    <!-- Dynamic AI Questions Output Area -->
+    <!-- Dynamic Questions Container -->
     <div id="questionsOutput">
-      <div class="section-title">SECTION A: MULTIPLE CHOICE QUESTIONS (10 x 2 = 20 Marks)</div>
+      <div class="section-title">SECTION A: MULTIPLE CHOICE QUESTIONS (4 x 2 = 8 Marks)</div>
       <div class="question-item">
-        1. Which of the following is known as the powerhouse of the cell?
+        Q1. Who proposed the Fluid Mosaic Model of the plasma membrane?
         <div class="mcq-options">
-          <div>(a) Nucleus</div>
-          <div>(b) Mitochondria</div>
+          <div>(a) Schleiden and Schwann</div>
+          <div>(b) Singer and Nicolson</div>
+          <div>(c) Robert Hooke</div>
+          <div>(d) Anton Von Leeuwenhoek</div>
+        </div>
+      </div>
+      <div class="question-item">
+        Q2. Which organelle is known as the powerhouse of the cell?
+        <div class="mcq-options">
+          <div>(a) Lysosome</div>
+          <div>(b) Endoplasmic Reticulum</div>
           <div>(c) Ribosome</div>
-          <div>(d) Cell Wall</div>
+          <div>(d) Mitochondria</div>
         </div>
       </div>
 
-      <div class="section-title">SECTION B: FILL IN THE BLANKS (5 x 2 = 10 Marks)</div>
-      <div class="question-item">1. Green plants prepare their own food by the process of ____________.</div>
+      <div class="section-title">SECTION B: FILL IN THE BLANKS (2 x 3 = 6 Marks)</div>
+      <div class="question-item">Q3. Prokaryotic ribosomes are of ____________ S type.</div>
+      <div class="question-item">Q4. Plant cell wall is mainly composed of ____________.</div>
 
-      <div class="section-title">SECTION C: SHORT ANSWER TYPE QUESTIONS (5 x 4 = 20 Marks)</div>
-      <div class="question-item">1. Define Photosynthesis and write its chemical equation.</div>
+      <div class="section-title">SECTION C: SHORT ANSWER QUESTIONS (2 x 5 = 10 Marks)</div>
+      <div class="question-item">Q5. Write two main differences between Prokaryotic and Eukaryotic cell.</div>
 
-      <div class="section-title">SECTION D: LONG ANSWER TYPE QUESTIONS (5 x 10 = 50 Marks)</div>
-      <div class="question-item">1. Describe the structure and function of a human heart with a neat labeled diagram.</div>
+      <div class="section-title">SECTION D: LONG ANSWER QUESTION (1 x 6 = 6 Marks)</div>
+      <div class="question-item">Q6. Draw a neat labeled diagram of a Plant Cell and describe its key organelles.</div>
     </div>
   </div>
 
@@ -186,21 +206,27 @@
 
     const subject = document.getElementById('inputSubject').value;
     const className = document.getElementById('inputClass').value;
-    const promptText = document.getElementById('inputPrompt').value;
+    const topicPrompt = document.getElementById('inputPrompt').value;
     const loading = document.getElementById('loading');
     
     loading.style.display = 'block';
 
-    const systemPrompt = `You are an expert school exam paper setter for Barsoi Public School. 
-    Create a complete question paper for ${className}, Subject: ${subject}. 
-    Follow this structure strictly in HTML format (using <div>, <div class="section-title">, <div class="question-item">, <div class="mcq-options">):
-    1. SECTION A: MCQs (Multiple Choice Questions with options a, b, c, d)
-    2. SECTION B: Fill in the Blanks
-    3. SECTION C: Short Answer Type Questions
-    4. SECTION D: Long Answer Type Questions
-    Do NOT output <html>, <head>, or <body> tags. Just output the HTML structure for the questions.`;
+    const systemPrompt = `You are an exam paper generator. Output ONLY the raw HTML question sections.
+    CRITICAL INSTRUCTIONS:
+    1. DO NOT output any header, school name, class, subject, topic title, or "All questions are compulsory" line.
+    2. Start directly with <div class="section-title">...</div>.
+    3. Keep questions concise and limited so that the entire output fits easily on ONE single A4 page.
+    4. Format structure:
+       <div class="section-title">SECTION A: MCQs</div>
+       <div class="question-item">Q1. ... <div class="mcq-options"><div>(a) ..</div><div>(b) ..</div><div>(c) ..</div><div>(d) ..</div></div></div>
+       <div class="section-title">SECTION B: FILL IN THE BLANKS</div>
+       <div class="question-item">Q2. ...</div>
+       <div class="section-title">SECTION C: SHORT ANSWERS</div>
+       <div class="question-item">Q3. ...</div>
+       <div class="section-title">SECTION D: LONG ANSWER</div>
+       <div class="question-item">Q4. ...</div>`;
 
-    const userPrompt = promptText ? `Create paper based on this guidance: ${promptText}` : `Create a standard balanced examination paper for ${subject}.`;
+    const userPrompt = `Generate concise questions for ${className}, Subject: ${subject}. Topic guidance: ${topicPrompt}`;
 
     try {
       const parts = [{ text: userPrompt }];
@@ -241,7 +267,7 @@
     syncHeaderInfo();
     const element = document.getElementById('paperArea');
     const opt = {
-      margin:       10,
+      margin:       0,
       filename:     `Question_Paper_${document.getElementById('inputSubject').value}.pdf`,
       image:        { type: 'jpeg', quality: 0.98 },
       html2canvas:  { scale: 2 },
