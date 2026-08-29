@@ -49,13 +49,13 @@
       min-height: 1000px;
     }
 
-    .school-title { text-align: center; font-size: 24px; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
-    .exam-title { text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 15px; text-decoration: underline; }
+    .school-title { text-align: center; font-size: 24px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; }
+    .exam-title { text-align: center; font-size: 17px; font-weight: bold; margin-bottom: 12px; text-transform: uppercase; }
 
-    .meta-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 16px; margin-bottom: 6px; }
+    .meta-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 15px; margin-bottom: 6px; }
     .instruction { font-style: italic; font-weight: bold; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 4px 0; margin: 12px 0 20px 0; text-align: center; }
 
-    .section-title { font-weight: bold; font-size: 16px; margin-top: 20px; margin-bottom: 10px; text-transform: uppercase; }
+    .section-title { font-weight: bold; font-size: 15px; margin-top: 20px; margin-bottom: 10px; text-transform: uppercase; }
     .question-item { margin-bottom: 12px; font-size: 15px; line-height: 1.5; }
     .mcq-options { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-left: 20px; margin-top: 4px; }
     
@@ -109,17 +109,26 @@
 
   <!-- Printable Paper Format -->
   <div class="paper-container" id="paperArea">
+    
+    <!-- Top Heading -->
     <div class="school-title">BARSOI PUBLIC SCHOOL</div>
+    
+    <!-- First Row: Exam Name (Centered) -->
+    <div class="exam-title" id="dispExam">ANNUAL EXAMINATION - 2026</div>
+
+    <!-- Second Row: FM (Left) | Time (Right) -->
     <div class="meta-row">
       <span>FM - <span id="dispFM">100</span></span>
       <span>Time - <span id="dispTime">2 hrs.</span></span>
     </div>
+
+    <!-- Third Row: Class (Left) | Subject (Right) -->
     <div class="meta-row">
       <span><span id="dispClass">Class - VIII</span></span>
-      <span id="dispExam" class="exam-title" style="margin:0; text-decoration:none;">ANNUAL EXAMINATION - 2026</span>
       <span>Subject - <span id="dispSubject">Science</span></span>
     </div>
 
+    <!-- Instruction Line -->
     <div class="instruction">All questions are compulsory.</div>
 
     <!-- Dynamic AI Questions Output Area -->
@@ -215,7 +224,6 @@
       const data = await response.json();
       if (data.candidates && data.candidates[0].content.parts[0].text) {
         let formattedHTML = data.candidates[0].content.parts[0].text;
-        // Clean markdown code blocks if AI wraps HTML in ```html
         formattedHTML = formattedHTML.replace(/```html/g, '').replace(/```/g, '');
         document.getElementById('questionsOutput').innerHTML = formattedHTML;
       } else {
