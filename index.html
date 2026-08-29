@@ -90,11 +90,11 @@
       </div>
       <div class="form-group">
         <label>Class</label>
-        <input type="text" id="inputClass" value="Class - VIII">
+        <input type="text" id="inputClass" value="Class - XI">
       </div>
       <div class="form-group">
         <label>Subject</label>
-        <input type="text" id="inputSubject" value="English Grammar">
+        <input type="text" id="inputSubject" value="Science (Biology)">
       </div>
       <div class="form-group">
         <label>Full Marks (FM)</label>
@@ -105,8 +105,8 @@
         <input type="text" id="inputTime" value="2 hrs.">
       </div>
       <div class="form-group full-width">
-        <label>Topic Name / Instructions</label>
-        <input type="text" id="inputPrompt" value="Parts of Speech (Noun, Pronoun, Verb, Adjective, Adverb)">
+        <label>Topic Name / Chapter Name</label>
+        <input type="text" id="inputPrompt" value="Photosynthesis in Higher Plants">
       </div>
     </div>
 
@@ -131,15 +131,15 @@
     </div>
 
     <div class="btn-group">
-      <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">📷 / 🖼️ Upload Handwritten / Image Question</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">📷 / 🖼️ Upload Handwritten / Book Image</button>
       <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)">
       
       <button class="btn btn-primary" onclick="generateQuestionPaper()">⚡ Generate Paper with AI</button>
       <button class="btn btn-success" onclick="printOrSavePDF()">🖨️ Print / Save as PDF</button>
     </div>
 
-    <img id="imagePreview" alt="Uploaded Handwritten Content Preview">
-    <div id="loading" class="loading-spinner">⏳ AI Processing Image / Generating Question Paper... Please wait</div>
+    <img id="imagePreview" alt="Uploaded Content Preview">
+    <div id="loading" class="loading-spinner">⏳ AI Generating Question Paper for selected Subject... Please wait</div>
   </div>
 
   <div class="paper-container" id="paperArea">
@@ -152,8 +152,8 @@
     </div>
 
     <div class="meta-row">
-      <span><span id="dispClass">Class - VIII</span></span>
-      <span>Subject - <span id="dispSubject">English Grammar</span></span>
+      <span><span id="dispClass">Class - XI</span></span>
+      <span>Subject - <span id="dispSubject">Science (Biology)</span></span>
     </div>
 
     <div class="instruction">All questions are compulsory.</div>
@@ -204,22 +204,21 @@
     const loading = document.getElementById('loading');
     loading.style.display = 'block';
 
-    const systemPrompt = `You are a school teacher creating an official exam paper.
-Return ONLY valid raw HTML code without markdown styling or backticks (\`\`\`html).
-If an image is provided, extract handwritten or printed questions from it and align them into requested sections.
-If no image, generate fresh questions on Subject: "${subject}" and Topic: "${topicPrompt}".
+    const systemPrompt = `You are an expert school teacher creating an examination paper.
+IMPORTANT: Generate questions ONLY for Subject: "${subject}" and Topic: "${topicPrompt}".
+Return ONLY raw HTML code without markdown formatting (\`\`\`html).
 
-Ensure:
-- Output 4 sections:
-  <div class="section-title">SECTION A: MULTIPLE CHOICE QUESTIONS</div> (${numMcq} MCQs)
-  Format: <div class="question-item">Q1. Question text<div class="mcq-options"><div>(a) Opt1</div><div>(b) Opt2</div><div>(c) Opt3</div><div>(d) Opt4</div></div></div>
-  <div class="section-title">SECTION B: FILL IN THE BLANKS</div> (${numFill} Questions)
-  <div class="section-title">SECTION C: SHORT ANSWER QUESTIONS</div> (${numShort} Questions)
-  <div class="section-title">SECTION D: LONG ANSWER QUESTIONS</div> (${numLong} Questions)
-- Sequence question numbering Q1, Q2, Q3 continuously.
-- Do not repeat questions.`;
+Structure:
+- If MCQ > 0: <div class="section-title">SECTION A: MULTIPLE CHOICE QUESTIONS</div>
+  MCQ format: <div class="question-item">Q1. Question text<div class="mcq-options"><div>(a) Option A</div><div>(b) Option B</div><div>(c) Option C</div><div>(d) Option D</div></div></div>
+- If Fill > 0: <div class="section-title">SECTION B: FILL IN THE BLANKS</div>
+- If Short > 0: <div class="section-title">SECTION C: SHORT ANSWER QUESTIONS</div>
+- If Long > 0: <div class="section-title">SECTION D: LONG ANSWER QUESTIONS</div>
 
-    const userPrompt = `Class: ${className}, Subject: ${subject}, Topic: ${topicPrompt}. Counts: MCQ=${numMcq}, Fill=${numFill}, Short=${numShort}, Long=${numLong}`;
+Number all questions continuously from Q1 to the total count.
+Ensure every single question is unique and accurate according to the subject.`;
+
+    const userPrompt = `Class: ${className}, Subject: ${subject}, Topic: ${topicPrompt}. Counts: MCQs=${numMcq}, FillBlanks=${numFill}, Short=${numShort}, Long=${numLong}`;
 
     try {
       const parts = [{ text: userPrompt }];
@@ -243,7 +242,7 @@ Ensure:
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) throw new Error("Worker Error");
+      if (!response.ok) throw new Error("Worker Response Failed");
 
       const data = await response.json();
       let textOutput = "";
@@ -252,63 +251,69 @@ Ensure:
         textOutput = data.candidates[0].content.parts[0].text;
       }
 
-      if (textOutput && textOutput.trim().length > 50) {
+      if (textOutput && textOutput.trim().length > 60) {
         let formattedHTML = textOutput.replace(/```html/g, '').replace(/```/g, '').trim();
         document.getElementById('questionsOutput').innerHTML = formattedHTML;
       } else {
-        generateSmartEnglishFallback(topicPrompt, numMcq, numFill, numShort, numLong);
+        generateSubjectAwareFallback(subject, topicPrompt, numMcq, numFill, numShort, numLong);
       }
     } catch (err) {
-      console.warn("AI generation failed or timed out. Rendering fallback paper.", err);
-      generateSmartEnglishFallback(topicPrompt, numMcq, numFill, numShort, numLong);
+      console.warn("AI generation error. Switching to subject-specific dynamic fallback.", err);
+      generateSubjectAwareFallback(subject, topicPrompt, numMcq, numFill, numShort, numLong);
     } finally {
       loading.style.display = 'none';
     }
   }
 
-  function generateSmartEnglishFallback(topic, mcqCount, fillCount, shortCount, longCount) {
+  // Dynamic Multi-Subject Fallback Generator
+  function generateSubjectAwareFallback(subject, topic, mcqCount, fillCount, shortCount, longCount) {
     let qNum = 1;
     let html = "";
+    const isBioOrScience = /bio|science|chem|phys|botany|zoology/i.test(subject);
 
-    const mcqQuestions = [
-      { q: "Identify the Noun in the sentence: 'Honesty is the best policy.'", opts: ["(a) Honesty", "(b) Best", "(c) Is", "(d) The"] },
-      { q: "Which part of speech is the underlined word? 'She runs <ins>fast</ins>.'", opts: ["(a) Adjective", "(b) Adverb", "(c) Verb", "(d) Noun"] },
-      { q: "Choose the correct Pronoun: 'Rohan lost _____ book in the playground.'", opts: ["(a) her", "(b) his", "(c) their", "(d) its"] },
-      { q: "Identify the Verb: 'The birds are flying in the sky.'", opts: ["(a) Birds", "(b) Sky", "(c) Flying", "(d) In"] },
-      { q: "Which word is a Proper Noun?", opts: ["(a) City", "(b) Patna", "(c) Teacher", "(d) River"] },
-      { q: "Find the Adjective: 'He bought a beautiful car yesterday.'", opts: ["(a) Bought", "(b) Car", "(c) Beautiful", "(d) Yesterday"] }
+    const mcqPool = isBioOrScience ? [
+      { q: `Which of the following is the primary site involved in ${topic}?`, opts: ["(a) Chloroplast", "(b) Mitochondria", "(c) Ribosome", "(d) Golgi body"] },
+      { q: `What is the key enzyme/component driving ${topic}?`, opts: ["(a) RuBisCO", "(b) Amylase", "(c) Lipase", "(d) Pepsin"] },
+      { q: `Which energy molecule is directly synthesized during ${topic}?`, opts: ["(a) ATP", "(b) DNA", "(c) RNA", "(d) Glucose"] },
+      { q: `What is the major product formed at the end stage of ${topic}?`, opts: ["(a) Oxygen / Organic compound", "(b) Nitrogen", "(c) Calcium", "(d) Methane"] },
+      { q: `Which environmental factor rate-limits the process of ${topic}?`, opts: ["(a) Light intensity & Temp", "(b) Humidity", "(c) Soil pH", "(d) Wind speed"] }
+    ] : [
+      { q: `Identify the primary usage or rule associated with ${topic}:`, opts: ["(a) Option A", "(b) Option B", "(c) Option C", "(d) Option D"] },
+      { q: `Which of the following correctly describes ${topic}?`, opts: ["(a) Type 1", "(b) Type 2", "(c) Type 3", "(d) Type 4"] },
+      { q: `Choose the correct option for the underlined application in ${topic}:`, opts: ["(a) Rule 1", "(b) Rule 2", "(c) Rule 3", "(d) Rule 4"] },
+      { q: `Which category does ${topic} belong to?`, opts: ["(a) Category A", "(b) Category B", "(c) Category C", "(d) Category D"] }
     ];
 
-    const fillQuestions = [
-      "A ____________ is a word used to describe or modify a noun.",
-      "The word 'and', 'but', and 'because' belong to the ____________ part of speech.",
-      "In the sentence 'Hurrah! We won the match', the word 'Hurrah' is an ____________.",
-      "Abstract nouns express ideas, feelings, or ____________.",
-      "Prepositions show the relationship between a noun and another word in a ____________."
+    const shortPool = isBioOrScience ? [
+      `Explain the key mechanism and importance of ${topic}.`,
+      `Differentiate between primary and secondary pathways in ${topic}.`,
+      `Describe the anatomical structural adaptations involved in ${topic}.`,
+      `How do environmental factors affect the overall rate of ${topic}?`,
+      `Summarize the light or energy conversion steps in ${topic}.`,
+      `Explain the role of key enzymes or catalysts involved in ${topic}.`
+    ] : [
+      `Define ${topic} with two suitable examples.`,
+      `Explain the key rules and exceptions associated with ${topic}.`,
+      `Differentiate between main types of ${topic}.`,
+      `Give five examples illustrating the application of ${topic}.`,
+      `Why is ${topic} essential in understanding this subject?`
     ];
 
-    const shortQuestions = [
-      "Define 'Noun' and give two examples of Proper Noun and Collective Noun.",
-      "What is an Adverb? How does it differ from an Adjective?",
-      "Underline the Pronouns in the following sentence: 'She told me that they will visit us tomorrow.'",
-      "Explain Transitive and Intransitive Verbs with one example each.",
-      "Differentiate between Preposition and Conjunction with examples.",
-      "Identify the Parts of Speech of each word in: 'Ah! She sings melodiously.'",
-      "What are Action Verbs and Helping Verbs? Give two examples."
-    ];
-
-    const longQuestions = [
-      "Define all 8 Parts of Speech with suitable examples for each.",
-      "Explain the different types of Nouns (Proper, Common, Collective, Material, Abstract) with examples.",
-      "What are Degrees of Comparison in Adjectives? Explain Positive, Comparative, and Superlative degrees with five examples.",
-      "Discuss Tenses and their relationship with Verbs. Explain Present, Past, and Future simple forms.",
-      "Read the passage carefully and classify any 10 words into their respective Parts of Speech."
+    const longPool = isBioOrScience ? [
+      `Describe the detailed step-by-step pathway of ${topic} with a neat labeled diagram.`,
+      `Elaborate on the structural and physiological factors controlling ${topic}.`,
+      `Discuss the experimental proof and key scientific discoveries related to ${topic}.`,
+      `Explain the cyclic and non-cyclic processes in ${topic} with full chemical/biological schematic.`
+    ] : [
+      `Write a comprehensive essay/note on ${topic} covering all its classifications, rules, and examples.`,
+      `Discuss in detail the application and importance of ${topic} with structured diagrams/tables.`,
+      `Explain all major sub-types of ${topic} with step-by-step examples.`
     ];
 
     if (mcqCount > 0) {
       html += `<div class="section-title">SECTION A: MULTIPLE CHOICE QUESTIONS</div>`;
       for (let i = 0; i < mcqCount; i++) {
-        let item = mcqQuestions[i % mcqQuestions.length];
+        let item = mcqPool[i % mcqPool.length];
         html += `<div class="question-item">Q${qNum++}. ${item.q}
           <div class="mcq-options">
             <div>${item.opts[0]}</div><div>${item.opts[1]}</div>
@@ -321,24 +326,23 @@ Ensure:
     if (fillCount > 0) {
       html += `<div class="section-title">SECTION B: FILL IN THE BLANKS</div>`;
       for (let i = 0; i < fillCount; i++) {
-        let t = fillQuestions[i % fillQuestions.length];
-        html += `<div class="question-item">Q${qNum++}. ${t}</div>`;
+        html += `<div class="question-item">Q${qNum++}. The primary component responsible for regulation in ${topic} is ____________.</div>`;
       }
     }
 
     if (shortCount > 0) {
       html += `<div class="section-title">SECTION C: SHORT ANSWER QUESTIONS</div>`;
       for (let i = 0; i < shortCount; i++) {
-        let t = shortQuestions[i % shortQuestions.length];
-        html += `<div class="question-item">Q${qNum++}. ${t}</div>`;
+        let text = shortPool[i % shortPool.length];
+        html += `<div class="question-item">Q${qNum++}. ${text}</div>`;
       }
     }
 
     if (longCount > 0) {
       html += `<div class="section-title">SECTION D: LONG ANSWER QUESTIONS</div>`;
       for (let i = 0; i < longCount; i++) {
-        let t = longQuestions[i % longQuestions.length];
-        html += `<div class="question-item">Q${qNum++}. ${t}</div>`;
+        let text = longPool[i % longPool.length];
+        html += `<div class="question-item">Q${qNum++}. ${text}</div>`;
       }
     }
 
