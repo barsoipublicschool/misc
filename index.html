@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Question Paper Generator - Barsoi Public School</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <style>
     * { box-sizing: border-box; font-family: 'Times New Roman', Times, serif; }
@@ -72,10 +71,11 @@
     
     .loading-spinner { display: none; color: #004085; font-weight: bold; margin-top: 8px; font-size: 13px; }
 
+    /* Print Specific Media Query */
     @media print {
       body { padding: 0; background: white; }
-      .control-panel { display: none; }
-      .paper-container { box-shadow: none; margin: 0; width: 100%; max-width: 100%; padding: 15px; }
+      .control-panel { display: none !important; }
+      .paper-container { box-shadow: none; margin: 0; width: 100%; max-width: 100%; padding: 10px; }
     }
   </style>
 </head>
@@ -136,11 +136,11 @@
       <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)">
       
       <button class="btn btn-primary" onclick="generateQuestionPaper()">⚡ Generate Paper with AI</button>
-      <button class="btn btn-success" onclick="downloadPDF()">📄 Download PDF</button>
+      <button class="btn btn-success" onclick="printOrSavePDF()">🖨️ Print / Save as PDF</button>
     </div>
 
     <img id="imagePreview" alt="Uploaded Content Preview">
-    <div id="loading" class="loading-spinner">⏳ Generating Unique Question Paper... Please wait</div>
+    <div id="loading" class="loading-spinner">⏳ Generating Question Paper... Please wait</div>
   </div>
 
   <div class="paper-container" id="paperArea">
@@ -259,7 +259,6 @@ Create exact unique questions: ${numMcq} MCQs, ${numFill} Fill in Blanks, ${numS
     }
   }
 
-  // Dynamic unique fallback generator (No repeating text)
   function generateSmartUniqueQuestions(topic, mcqCount, fillCount, shortCount, longCount) {
     let qNum = 1;
     let html = "";
@@ -345,18 +344,9 @@ Create exact unique questions: ${numMcq} MCQs, ${numFill} Fill in Blanks, ${numS
     document.getElementById('questionsOutput').innerHTML = html;
   }
 
-  function downloadPDF() {
+  function printOrSavePDF() {
     syncHeaderInfo();
-    const element = document.getElementById('paperArea');
-    const opt = {
-      margin:       5,
-      filename:     `Question_Paper_${document.getElementById('inputSubject').value}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true, windowWidth: 800 },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    html2pdf().set(opt).from(element).save();
+    window.print();
   }
 
   window.onload = function() {
