@@ -106,7 +106,7 @@
       </div>
       <div class="form-group full-width">
         <label>Topic Name / Chapter Name</label>
-        <input type="text" id="inputPrompt" value="Photosynthesis in Higher Plants">
+        <input type="text" id="inputPrompt" value="Cell: The Unit of Life">
       </div>
     </div>
 
@@ -131,7 +131,7 @@
     </div>
 
     <div class="btn-group">
-      <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">📷 / 🖼️ Upload Handwritten / Book Image</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">📷 / 🖼️ Upload Image / Handwritten Qs</button>
       <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)">
       
       <button class="btn btn-primary" onclick="generateQuestionPaper()">⚡ Generate Paper with AI</button>
@@ -139,7 +139,7 @@
     </div>
 
     <img id="imagePreview" alt="Uploaded Content Preview">
-    <div id="loading" class="loading-spinner">⏳ AI Generating Question Paper for selected Subject... Please wait</div>
+    <div id="loading" class="loading-spinner">⏳ AI Generating Unique Questions... Please wait</div>
   </div>
 
   <div class="paper-container" id="paperArea">
@@ -204,31 +204,27 @@
     const loading = document.getElementById('loading');
     loading.style.display = 'block';
 
-    const systemPrompt = `You are an expert school teacher creating an examination paper.
-IMPORTANT: Generate questions ONLY for Subject: "${subject}" and Topic: "${topicPrompt}".
-Return ONLY raw HTML code without markdown formatting (\`\`\`html).
+    const systemPrompt = `You are an examination question generator.
+Output ONLY raw HTML with no code block markdown.
+Subject: "${subject}", Topic: "${topicPrompt}".
 
-Structure:
-- If MCQ > 0: <div class="section-title">SECTION A: MULTIPLE CHOICE QUESTIONS</div>
-  MCQ format: <div class="question-item">Q1. Question text<div class="mcq-options"><div>(a) Option A</div><div>(b) Option B</div><div>(c) Option C</div><div>(d) Option D</div></div></div>
-- If Fill > 0: <div class="section-title">SECTION B: FILL IN THE BLANKS</div>
-- If Short > 0: <div class="section-title">SECTION C: SHORT ANSWER QUESTIONS</div>
-- If Long > 0: <div class="section-title">SECTION D: LONG ANSWER QUESTIONS</div>
+Ensure every question in each section is distinct and relevant to "${topicPrompt}".
+Never repeat any fill-in-the-blank or question wording.
 
-Number all questions continuously from Q1 to the total count.
-Ensure every single question is unique and accurate according to the subject.`;
+Sections required:
+${numMcq > 0 ? `<div class="section-title">SECTION A: MULTIPLE CHOICE QUESTIONS</div> (${numMcq} MCQs)` : ''}
+${numFill > 0 ? `<div class="section-title">SECTION B: FILL IN THE BLANKS</div> (${numFill} unique questions)` : ''}
+${numShort > 0 ? `<div class="section-title">SECTION C: SHORT ANSWER QUESTIONS</div> (${numShort} questions)` : ''}
+${numLong > 0 ? `<div class="section-title">SECTION D: LONG ANSWER QUESTIONS</div> (${numLong} questions)` : ''}
 
-    const userPrompt = `Class: ${className}, Subject: ${subject}, Topic: ${topicPrompt}. Counts: MCQs=${numMcq}, FillBlanks=${numFill}, Short=${numShort}, Long=${numLong}`;
+Numbering must be continuous Q1 to Q${numMcq + numFill + numShort + numLong}.`;
+
+    const userPrompt = `Create exam questions for Class: ${className}, Subject: ${subject}, Topic: ${topicPrompt}. Quantities: MCQs=${numMcq}, FillBlanks=${numFill}, Short=${numShort}, Long=${numLong}`;
 
     try {
       const parts = [{ text: userPrompt }];
       if (base64Image) {
-        parts.push({
-          inline_data: {
-            mime_type: imageMimeType,
-            data: base64Image
-          }
-        });
+        parts.push({ inline_data: { mime_type: imageMimeType, data: base64Image } });
       }
 
       const payload = {
@@ -242,7 +238,7 @@ Ensure every single question is unique and accurate according to the subject.`;
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) throw new Error("Worker Response Failed");
+      if (!response.ok) throw new Error("Worker Error");
 
       const data = await response.json();
       let textOutput = "";
@@ -258,56 +254,68 @@ Ensure every single question is unique and accurate according to the subject.`;
         generateSubjectAwareFallback(subject, topicPrompt, numMcq, numFill, numShort, numLong);
       }
     } catch (err) {
-      console.warn("AI generation error. Switching to subject-specific dynamic fallback.", err);
+      console.warn("AI generation offline/timed out. Rendering dynamic fallback.", err);
       generateSubjectAwareFallback(subject, topicPrompt, numMcq, numFill, numShort, numLong);
     } finally {
       loading.style.display = 'none';
     }
   }
 
-  // Dynamic Multi-Subject Fallback Generator
+  // Dynamic Multi-Subject Fallback Generator with Varied Questions
   function generateSubjectAwareFallback(subject, topic, mcqCount, fillCount, shortCount, longCount) {
     let qNum = 1;
     let html = "";
     const isBioOrScience = /bio|science|chem|phys|botany|zoology/i.test(subject);
 
     const mcqPool = isBioOrScience ? [
-      { q: `Which of the following is the primary site involved in ${topic}?`, opts: ["(a) Chloroplast", "(b) Mitochondria", "(c) Ribosome", "(d) Golgi body"] },
-      { q: `What is the key enzyme/component driving ${topic}?`, opts: ["(a) RuBisCO", "(b) Amylase", "(c) Lipase", "(d) Pepsin"] },
-      { q: `Which energy molecule is directly synthesized during ${topic}?`, opts: ["(a) ATP", "(b) DNA", "(c) RNA", "(d) Glucose"] },
-      { q: `What is the major product formed at the end stage of ${topic}?`, opts: ["(a) Oxygen / Organic compound", "(b) Nitrogen", "(c) Calcium", "(d) Methane"] },
-      { q: `Which environmental factor rate-limits the process of ${topic}?`, opts: ["(a) Light intensity & Temp", "(b) Humidity", "(c) Soil pH", "(d) Wind speed"] }
+      { q: `Which organelle is known as the powerhouse or primary functional unit in ${topic}?`, opts: ["(a) Mitochondria", "(b) Chloroplast", "(c) Nucleus", "(d) Ribosome"] },
+      { q: `What is the key chemical component or structural framework of ${topic}?`, opts: ["(a) Phospholipid bilayer", "(b) Cellulose", "(c) Chitin", "(d) Peptidoglycan"] },
+      { q: `Which molecule serves as the direct energy carrier during metabolic activities in ${topic}?`, opts: ["(a) ATP", "(b) DNA", "(c) RNA", "(d) Glucose"] },
+      { q: `Which structure regulates selective transport across ${topic}?`, opts: ["(a) Plasma membrane", "(b) Cell wall", "(c) Endoplasmic Reticulum", "(d) Lysosome"] },
+      { q: `The process of protein synthesis in ${topic} primarily takes place on:`, opts: ["(a) Ribosomes", "(b) Golgi body", "(c) Vacuole", "(d) Peroxisome"] }
     ] : [
       { q: `Identify the primary usage or rule associated with ${topic}:`, opts: ["(a) Option A", "(b) Option B", "(c) Option C", "(d) Option D"] },
       { q: `Which of the following correctly describes ${topic}?`, opts: ["(a) Type 1", "(b) Type 2", "(c) Type 3", "(d) Type 4"] },
-      { q: `Choose the correct option for the underlined application in ${topic}:`, opts: ["(a) Rule 1", "(b) Rule 2", "(c) Rule 3", "(d) Rule 4"] },
-      { q: `Which category does ${topic} belong to?`, opts: ["(a) Category A", "(b) Category B", "(c) Category C", "(d) Category D"] }
+      { q: `Choose the correct option for ${topic}:`, opts: ["(a) Rule 1", "(b) Rule 2", "(c) Rule 3", "(d) Rule 4"] }
+    ];
+
+    const fillPool = isBioOrScience ? [
+      `The outer covering that provides rigidity and protection in ${topic} is called ____________.`,
+      `The fluid matrix occupying the inner space of ${topic} is known as ____________.`,
+      `Genetic material responsible for heredity in ${topic} is contained inside the ____________.`,
+      `Specialized enzymes for intracellular digestion in ${topic} are stored in ____________.`,
+      `The process of cellular division responsible for growth in ${topic} is ____________.`,
+      `In ${topic}, energy synthesis via aerobic respiration occurs within ____________.`
+    ] : [
+      `The primary function of ${topic} is to ____________.`,
+      `In standard grammar/mathematics, ${topic} is classified under ____________.`,
+      `The fundamental rule governing ${topic} states that ____________.`,
+      `An essential characteristic feature of ${topic} is ____________.`,
+      `When applying ${topic}, the resulting outcome is ____________.`
     ];
 
     const shortPool = isBioOrScience ? [
-      `Explain the key mechanism and importance of ${topic}.`,
-      `Differentiate between primary and secondary pathways in ${topic}.`,
-      `Describe the anatomical structural adaptations involved in ${topic}.`,
-      `How do environmental factors affect the overall rate of ${topic}?`,
-      `Summarize the light or energy conversion steps in ${topic}.`,
-      `Explain the role of key enzymes or catalysts involved in ${topic}.`
+      `Explain the key structural components and importance of ${topic}.`,
+      `Differentiate between Prokaryotic and Eukaryotic structures related to ${topic}.`,
+      `Describe the fluid mosaic model or membrane transport in ${topic}.`,
+      `What is the role of Nucleus and Ribosomes in ${topic}?`,
+      `Summarize the major differences between plant and animal ${topic}.`,
+      `Explain how ${topic} maintains homeostatic regulation.`
     ] : [
       `Define ${topic} with two suitable examples.`,
       `Explain the key rules and exceptions associated with ${topic}.`,
       `Differentiate between main types of ${topic}.`,
-      `Give five examples illustrating the application of ${topic}.`,
-      `Why is ${topic} essential in understanding this subject?`
+      `Give five examples illustrating the application of ${topic}.`
     ];
 
     const longPool = isBioOrScience ? [
-      `Describe the detailed step-by-step pathway of ${topic} with a neat labeled diagram.`,
-      `Elaborate on the structural and physiological factors controlling ${topic}.`,
-      `Discuss the experimental proof and key scientific discoveries related to ${topic}.`,
-      `Explain the cyclic and non-cyclic processes in ${topic} with full chemical/biological schematic.`
+      `Describe the detailed structure of ${topic} with a neat, well-labeled diagram.`,
+      `Elaborate on the function of various membrane-bound organelles involved in ${topic}.`,
+      `Discuss cell division (Mitosis vs Meiosis) and its significance in relation to ${topic}.`,
+      `Explain transport mechanisms (Passive diffusion vs Active transport) across ${topic}.`
     ] : [
-      `Write a comprehensive essay/note on ${topic} covering all its classifications, rules, and examples.`,
-      `Discuss in detail the application and importance of ${topic} with structured diagrams/tables.`,
-      `Explain all major sub-types of ${topic} with step-by-step examples.`
+      `Write a comprehensive essay/note on ${topic} covering all its classifications and examples.`,
+      `Discuss in detail the application and importance of ${topic} with structured examples.`
     ];
 
     if (mcqCount > 0) {
@@ -326,7 +334,8 @@ Ensure every single question is unique and accurate according to the subject.`;
     if (fillCount > 0) {
       html += `<div class="section-title">SECTION B: FILL IN THE BLANKS</div>`;
       for (let i = 0; i < fillCount; i++) {
-        html += `<div class="question-item">Q${qNum++}. The primary component responsible for regulation in ${topic} is ____________.</div>`;
+        let sentence = fillPool[i % fillPool.length];
+        html += `<div class="question-item">Q${qNum++}. ${sentence}</div>`;
       }
     }
 
