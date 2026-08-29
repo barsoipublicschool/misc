@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Barsoi Public School AI</title>
+
+  <!-- PDF Export Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background: #f0f2f5; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+    
+    header { background: #004085; color: white; padding: 12px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); position: relative; }
+    header h1 { margin: 0; font-size: 20px; }
+    header p { margin: 3px 0 0 0; font-size: 12px; opacity: 0.8; }
+
+    .header-actions { margin-top: 10px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+    .action-btn { background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid rgba(255, 255, 255, 0.4); padding: 5px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; transition: 0.2s; }
+    .action-btn:hover { background: rgba(255, 255, 255, 0.4); }
+
+    #chat-container { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+
+    .msg-wrapper { display: flex; flex-direction: column; max-width: 80%; }
+    .user-wrapper { align-self: flex-end; align-items: flex-end; }
+    .ai-wrapper { align-self: flex-start; align-items: flex-start; }
+
+    .msg { padding: 12px 16px; border-radius: 15px; font-size: 15px; line-height: 1.4; word-wrap: break-word; position: relative; }
+    .user-msg { background: #007bff; color: white; border-bottom-right-radius: 2px; }
+    .ai-msg { background: white; color: #333; border-bottom-left-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+    .msg-toolbar { display: flex; gap: 6px; margin-top: 4px; font-size: 12px; opacity: 0.7; }
+    .speaker-icon { cursor: pointer; font-size: 14px; user-select: none; }
+
+    .input-area { background: white; padding: 10px; display: flex; gap: 8px; border-top: 1px solid #ddd; align-items: center; }
+    .input-area input[type="text"] { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 25px; outline: none; font-size: 15px; }
+    .input-area button { background: #004085; color: white; border: none; padding: 12px 18px; border-radius: 25px; cursor: pointer; font-weight: bold; }
+    
+    .icon-btn { cursor: pointer; background: #e9ecef; border: 1px solid #ccc; padding: 10px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: 0.2s; }
+    .icon-btn:hover { background: #dee2e6; }
+    .recording { background: #dc3545 !important; color: white; animation: pulse 1s infinite; }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    #imagePreview { max-height: 100px; display: none; margin: 5px; border-radius: 5px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🎓 Barsoi Public School AI</h1>
+  <p>Your Smart Learning & Doubt Solver Assistant</p>
+  <div class="header-actions">
+    <button class="action-btn" onclick="exportToPDF()">📄 Export Chat (PDF)</button>
+    <button class="action-btn" onclick="clearChatHistory()">🗑️ Clear History</button>
+  </div>
+</header>
+
+<div id="chat-container"></div>
+
+<div style="padding: 0 15px;">
+  <img id="imagePreview" alt="Preview">
+</div>
+
+<div class="input-area">
+  <label class="icon-btn" title="Upload Image">
+    📷
+    <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
+  </label>
+
+  <button class="icon-btn" id="micBtn" title="Voice Search" onclick="toggleVoiceRecognition()">🎙️</button>
+
+  <input type="text" id="userInput" placeholder="Ask anything or speak..." onkeypress="handleKeyPress(event)">
+  <button onclick="sendMessage()">Send 🚀</button>
+</div>
+
+<script>
+  const WORKER_URL = "https://barsoi-ai-proxy.barsoipublicschool26.workers.dev/";
+  
+  let base64Image = null;
+  let recognition = null;
+  let isRecording = false;
+
+  // Initialize Speech Recognition
+  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US'; // Default language (Hindi ke liye 'hi-IN' bhi set kar sakte hain)
+
+    recognition.onresult = function(event) {
+      const transcript = event.results[0][0].transcript;
+      document.getElementById('userInput').value = transcript;
+      stopRecording();
+    };
+
+    recognition.onerror = function(event) {
+      console.error("Speech Recognition Error: ", event.error);
+      stopRecording();
+    };
+
+    recognition.onend = function() {
+      stopRecording();
+    };
+  }
+
+  function toggleVoiceRecognition() {
+    if (!recognition) {
+      alert("Voice recognition is not supported on this browser.");
+      return;
+    }
+
+    if (isRecording) {
+      recognition.stop();
+      stopRecording();
+    } else {
+      recognition.start();
+      isRecording = true;
+      document.getElementById('micBtn').classList.add('recording');
+    }
+  }
+
+  function stopRecording() {
+    isRecording = false;
+    document.getElementById('micBtn').classList.remove('recording');
+  }
+
+  // Load chat history on page load
+  window.onload = function() {
+    loadChatHistory();
+  };
+
+  function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        base64Image = e.target.result.split(',')[1];
+        const preview = document.getElementById('imagePreview');
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function handleKeyPress(e) {
+    if (e.key === 'Enter') sendMessage();
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('userInput');
+    const text = input.value.trim();
+    
+    if (!text && !base64Image) return;
+
+    appendMessage(text || "Uploaded Image", 'user-msg', true);
+    
+    input.value = '';
+    document.getElementById('imagePreview').style.display = 'none';
+
+    const loadingMsgObj = appendMessage("Barsoi AI is thinking...", 'ai-msg', false);
+
+    try {
+      const parts = [];
+      if (text) parts.push({ text: text });
+      
+      if (base64Image) {
+        parts.push({
+          inline_data: {
+            mime_type: "image/jpeg",
+            data: base64Image
+          }
+        });
+      }
+
+      const payload = {
+        system_instruction: {
+          parts: [{ text: "You are Barsoi Public School AI Assistant. Help students politely, solve academic queries, and check answer sheets accurately." }]
+        },
+        contents: [{ parts: parts }]
+      };
+
+      const response = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+      let aiResponseText = "";
+
+      if (data.error) {
+        aiResponseText = "API Error: " + data.error.message;
+      } else if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0].text) {
+        aiResponseText = data.candidates[0].content.parts[0].text;
+      } else {
+        aiResponseText = "Response nahi mila. Please try again.";
+      }
+
+      loadingMsgObj.element.innerText = aiResponseText;
+      saveMessageToStorage(aiResponseText, 'ai-msg');
+
+      // Add speech button to AI response
+      addSpeechButton(loadingMsgObj.wrapper, aiResponseText);
+
+    } catch (err) {
+      loadingMsgObj.element.innerText = "Network Error: Worker connection failed.";
+      console.error(err);
+    } finally {
+      base64Image = null;
+    }
+  }
+
+  function appendMessage(text, className, saveToStorage = true) {
+    const container = document.getElementById('chat-container');
+    
+    const wrapper = document.createElement('div');
+    wrapper.className = `msg-wrapper ${className === 'user-msg' ? 'user-wrapper' : 'ai-wrapper'}`;
+
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `msg ${className}`;
+    msgDiv.innerText = text;
+
+    wrapper.appendChild(msgDiv);
+
+    if (className === 'ai-msg' && text !== "Barsoi AI is thinking...") {
+      addSpeechButton(wrapper, text);
+    }
+
+    container.appendChild(wrapper);
+    container.scrollTop = container.scrollHeight;
+
+    if (saveToStorage) {
+      saveMessageToStorage(text, className);
+    }
+
+    return { element: msgDiv, wrapper: wrapper };
+  }
+
+  function addSpeechButton(wrapper, text) {
+    const toolbar = document.createElement('div');
+    toolbar.className = 'msg-toolbar';
+
+    const speakBtn = document.createElement('span');
+    speakBtn.className = 'speaker-icon';
+    speakBtn.innerText = '🔊 Listen';
+    speakBtn.onclick = function() {
+      speakText(text);
+    };
+
+    toolbar.appendChild(speakBtn);
+    wrapper.appendChild(toolbar);
+  }
+
+  function speakText(text) {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel(); // Stop ongoing speech
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.0;
+      window.speechSynthesis.speak(utterance);
+    } else {
+      alert("Text-to-speech is not supported in this browser.");
+    }
+  }
+
+  // Local Storage Functions for Chat History
+  function saveMessageToStorage(text, className) {
+    let history = JSON.parse(localStorage.getItem('barsoi_chat_history')) || [];
+    history.push({ text: text, className: className });
+    localStorage.setItem('barsoi_chat_history', JSON.stringify(history));
+  }
+
+  function loadChatHistory() {
+    const history = JSON.parse(localStorage.getItem('barsoi_chat_history')) || [];
+    const container = document.getElementById('chat-container');
+    container.innerHTML = '';
+
+    if (history.length === 0) {
+      appendMessage("Hello! 👋 I am Barsoi Public School AI Assistant. You can ask me any question or get help by uploading a handwritten copy or photo!", 'ai-msg', true);
+    } else {
+      history.forEach(msg => {
+        appendMessage(msg.text, msg.className, false);
+      });
+    }
+  }
+
+  function clearChatHistory() {
+    if (confirm("Kya aap saari chat history delete karna chahte hain?")) {
+      localStorage.removeItem('barsoi_chat_history');
+      document.getElementById('chat-container').innerHTML = '';
+      loadChatHistory();
+    }
+  }
+
+  // Export Chat to PDF
+  function exportToPDF() {
+    const element = document.getElementById('chat-container');
+    const opt = {
+      margin:       10,
+      filename:     'Barsoi_Public_School_AI_Chat.pdf',
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2 },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(element).save();
+  }
+</script>
+
+</body>
+</html>
