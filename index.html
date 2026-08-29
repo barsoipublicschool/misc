@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Question Paper Generator - Barsoi Public School</title>
+
+  <!-- html2pdf Library for PDF Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; font-family: 'Times New Roman', Times, serif; }
+    body { background: #eef2f5; margin: 0; padding: 20px; color: #333; }
+
+    .control-panel {
+      max-width: 800px;
+      margin: 0 auto 20px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .control-panel h2 { margin-top: 0; color: #004085; font-size: 20px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group label { font-size: 13px; font-weight: bold; margin-bottom: 4px; }
+    .form-group input, .form-group select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+    .full-width { grid-column: span 2; }
+
+    .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .btn { padding: 10px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-primary { background: #004085; color: white; }
+    .btn-success { background: #28a745; color: white; }
+    .btn-secondary { background: #6c757d; color: white; }
+    .btn:hover { opacity: 0.9; }
+
+    #fileInput { display: none; }
+    #imagePreview { max-height: 80px; display: none; margin-top: 10px; border-radius: 4px; }
+
+    /* Paper Print Styling */
+    .paper-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 40px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.15);
+      min-height: 1000px;
+    }
+
+    .school-title { text-align: center; font-size: 24px; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
+    .exam-title { text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 15px; text-decoration: underline; }
+
+    .meta-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 16px; margin-bottom: 6px; }
+    .instruction { font-style: italic; font-weight: bold; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 4px 0; margin: 12px 0 20px 0; text-align: center; }
+
+    .section-title { font-weight: bold; font-size: 16px; margin-top: 20px; margin-bottom: 10px; text-transform: uppercase; }
+    .question-item { margin-bottom: 12px; font-size: 15px; line-height: 1.5; }
+    .mcq-options { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-left: 20px; margin-top: 4px; }
+    
+    .loading-spinner { display: none; color: #004085; font-weight: bold; margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+  <!-- Controls Panel -->
+  <div class="control-panel">
+    <h2>🎯 Question Paper Generator Settings</h2>
+    
+    <div class="form-grid">
+      <div class="form-group full-width">
+        <label>Exam Name (Center Title)</label>
+        <input type="text" id="inputExam" value="ANNUAL EXAMINATION - 2026">
+      </div>
+      <div class="form-group">
+        <label>Class</label>
+        <input type="text" id="inputClass" value="Class - VIII">
+      </div>
+      <div class="form-group">
+        <label>Subject</label>
+        <input type="text" id="inputSubject" value="Science">
+      </div>
+      <div class="form-group">
+        <label>Full Marks (FM)</label>
+        <input type="text" id="inputFM" value="100">
+      </div>
+      <div class="form-group">
+        <label>Time</label>
+        <input type="text" id="inputTime" value="2 hrs.">
+      </div>
+      <div class="form-group full-width">
+        <label>Topic / Instructions for AI (Optional)</label>
+        <input type="text" id="inputPrompt" placeholder="e.g. Chapter 1 to 5, focus on Photosynthesis and Cell Structure">
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">📷 / 🖼️ Upload Content (Camera/Gallery)</button>
+      <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)">
+      
+      <button class="btn btn-primary" onclick="generateQuestionPaper()">⚡ Generate Paper with AI</button>
+      <button class="btn btn-success" onclick="downloadPDF()">📄 Download PDF</button>
+    </div>
+
+    <img id="imagePreview" alt="Uploaded Content Preview">
+    <div id="loading" class="loading-spinner">⏳ Generating Question Paper, please wait...</div>
+  </div>
+
+  <!-- Printable Paper Format -->
+  <div class="paper-container" id="paperArea">
+    <div class="school-title">BARSOI PUBLIC SCHOOL</div>
+    <div class="meta-row">
+      <span>FM - <span id="dispFM">100</span></span>
+      <span>Time - <span id="dispTime">2 hrs.</span></span>
+    </div>
+    <div class="meta-row">
+      <span><span id="dispClass">Class - VIII</span></span>
+      <span id="dispExam" class="exam-title" style="margin:0; text-decoration:none;">ANNUAL EXAMINATION - 2026</span>
+      <span>Subject - <span id="dispSubject">Science</span></span>
+    </div>
+
+    <div class="instruction">All questions are compulsory.</div>
+
+    <!-- Dynamic AI Questions Output Area -->
+    <div id="questionsOutput">
+      <div class="section-title">SECTION A: MULTIPLE CHOICE QUESTIONS (10 x 2 = 20 Marks)</div>
+      <div class="question-item">
+        1. Which of the following is known as the powerhouse of the cell?
+        <div class="mcq-options">
+          <div>(a) Nucleus</div>
+          <div>(b) Mitochondria</div>
+          <div>(c) Ribosome</div>
+          <div>(d) Cell Wall</div>
+        </div>
+      </div>
+
+      <div class="section-title">SECTION B: FILL IN THE BLANKS (5 x 2 = 10 Marks)</div>
+      <div class="question-item">1. Green plants prepare their own food by the process of ____________.</div>
+
+      <div class="section-title">SECTION C: SHORT ANSWER TYPE QUESTIONS (5 x 4 = 20 Marks)</div>
+      <div class="question-item">1. Define Photosynthesis and write its chemical equation.</div>
+
+      <div class="section-title">SECTION D: LONG ANSWER TYPE QUESTIONS (5 x 10 = 50 Marks)</div>
+      <div class="question-item">1. Describe the structure and function of a human heart with a neat labeled diagram.</div>
+    </div>
+  </div>
+
+<script>
+  const WORKER_URL = "https://barsoi-ai-proxy.barsoipublicschool26.workers.dev/";
+  let base64Image = null;
+
+  function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        base64Image = e.target.result.split(',')[1];
+        const preview = document.getElementById('imagePreview');
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function syncHeaderInfo() {
+    document.getElementById('dispFM').innerText = document.getElementById('inputFM').value;
+    document.getElementById('dispTime').innerText = document.getElementById('inputTime').value;
+    document.getElementById('dispClass').innerText = document.getElementById('inputClass').value;
+    document.getElementById('dispExam').innerText = document.getElementById('inputExam').value;
+    document.getElementById('dispSubject').innerText = document.getElementById('inputSubject').value;
+  }
+
+  async function generateQuestionPaper() {
+    syncHeaderInfo();
+
+    const subject = document.getElementById('inputSubject').value;
+    const className = document.getElementById('inputClass').value;
+    const promptText = document.getElementById('inputPrompt').value;
+    const loading = document.getElementById('loading');
+    
+    loading.style.display = 'block';
+
+    const systemPrompt = `You are an expert school exam paper setter for Barsoi Public School. 
+    Create a complete question paper for ${className}, Subject: ${subject}. 
+    Follow this structure strictly in HTML format (using <div>, <div class="section-title">, <div class="question-item">, <div class="mcq-options">):
+    1. SECTION A: MCQs (Multiple Choice Questions with options a, b, c, d)
+    2. SECTION B: Fill in the Blanks
+    3. SECTION C: Short Answer Type Questions
+    4. SECTION D: Long Answer Type Questions
+    Do NOT output <html>, <head>, or <body> tags. Just output the HTML structure for the questions.`;
+
+    const userPrompt = promptText ? `Create paper based on this guidance: ${promptText}` : `Create a standard balanced examination paper for ${subject}.`;
+
+    try {
+      const parts = [{ text: userPrompt }];
+      if (base64Image) {
+        parts.push({
+          inline_data: { mime_type: "image/jpeg", data: base64Image }
+        });
+      }
+
+      const payload = {
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ parts: parts }]
+      };
+
+      const response = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+      if (data.candidates && data.candidates[0].content.parts[0].text) {
+        let formattedHTML = data.candidates[0].content.parts[0].text;
+        // Clean markdown code blocks if AI wraps HTML in ```html
+        formattedHTML = formattedHTML.replace(/```html/g, '').replace(/```/g, '');
+        document.getElementById('questionsOutput').innerHTML = formattedHTML;
+      } else {
+        alert("Could not generate questions. Please try again.");
+      }
+    } catch (err) {
+      alert("Error connecting to AI service.");
+      console.error(err);
+    } finally {
+      loading.style.display = 'none';
+    }
+  }
+
+  function downloadPDF() {
+    syncHeaderInfo();
+    const element = document.getElementById('paperArea');
+    const opt = {
+      margin:       10,
+      filename:     `Question_Paper_${document.getElementById('inputSubject').value}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2 },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(element).save();
+  }
+</script>
+
+</body>
+</html>
