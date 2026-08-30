@@ -79,7 +79,7 @@
 <body>
 
   <div class="control-panel">
-    <h2>🎯 Question Paper Generator</h2>
+    <h2>🎯 Question Paper Generator (Gemini 3.6-flash)</h2>
     
     <div class="form-grid">
       <div class="form-group full-width">
@@ -137,7 +137,7 @@
     </div>
 
     <div id="imagePreviewContainer" class="preview-container"></div>
-    <div id="loading" class="loading-spinner">⏳ Processing... Please wait</div>
+    <div id="loading" class="loading-spinner">⏳ Processing via Gemini 3.6... Please wait</div>
   </div>
 
   <div class="paper-container" id="paperArea">
@@ -160,8 +160,7 @@
   </div>
 
 <script>
-  // Apka Google Apps Script Deployment URL yahan paste karein
-  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyygkswede1MaEUXzq7PgGJK5Yp7PVgVbh02N2oqMhHqZEWw-efrMgNIFWDgB4LPCb3/exec";
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwQzEUiCYU4tch1RAuTpSMrNi6sYNDVF4t7qR7zLzBgMlOHR70wMqyXmTE0h4uESrfY/exec";
   let uploadedImages = [];
 
   function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.6) {
@@ -234,17 +233,20 @@
     const loading = document.getElementById('loading');
     loading.style.display = 'block';
 
-    const systemPrompt = `You are an examination paper creator.
-READ THE IMAGES ATTACHED AND EXTRACT QUESTIONS ACCURATELY.
-Return ONLY clean HTML output without markdown ticks.
+    const systemPrompt = `You are an examination question generator.
+1. READ ATTACHED IMAGES ACCURATELY.
+2. Generate questions from content in the attached images.
+3. Output strictly raw HTML without markdown codeblocks (\`\`\`html).
 
-Structure requirement:
+Structure:
 ${numMcq > 0 ? `<div class="section-title">SECTION A: MULTIPLE CHOICE QUESTIONS</div>` : ''}
 ${numFill > 0 ? `<div class="section-title">SECTION B: FILL IN THE BLANKS</div>` : ''}
 ${numShort > 0 ? `<div class="section-title">SECTION C: SHORT ANSWER QUESTIONS</div>` : ''}
-${numLong > 0 ? `<div class="section-title">SECTION D: LONG ANSWER QUESTIONS</div>` : ''}`;
+${numLong > 0 ? `<div class="section-title">SECTION D: LONG ANSWER QUESTIONS</div>` : ''}
 
-    const userPrompt = `Class: ${className}, Subject: ${subject}, Topic: ${topicPrompt}. Quantities: MCQs=${numMcq}, Fill=${numFill}, Short=${numShort}, Long=${numLong}. Use attached images context explicitly.`;
+MCQs must follow: <div class="question-item">Q1. Question text<div class="mcq-options"><div>(a) Option 1</div><div>(b) Option 2</div><div>(c) Option 3</div><div>(d) Option 4</div></div></div>`;
+
+    const userPrompt = `Class: ${className}, Subject: ${subject}, Topic: ${topicPrompt}. Counts: MCQs=${numMcq}, Fill=${numFill}, Short=${numShort}, Long=${numLong}. Use attached images context explicitly.`;
 
     try {
       const parts = [{ text: userPrompt }];
@@ -257,7 +259,6 @@ ${numLong > 0 ? `<div class="section-title">SECTION D: LONG ANSWER QUESTIONS</di
         contents: [{ parts: parts }]
       };
 
-      // Sending POST request to Google Apps Script
       const response = await fetch(GAS_WEB_APP_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -271,15 +272,15 @@ ${numLong > 0 ? `<div class="section-title">SECTION D: LONG ANSWER QUESTIONS</di
         textOutput = data.candidates[0].content.parts[0].text;
       }
 
-      if (textOutput && textOutput.trim().length > 30) {
+      if (textOutput && textOutput.trim().length > 20) {
         let formattedHTML = textOutput.replace(/```html/g, '').replace(/```/g, '').trim();
         document.getElementById('questionsOutput').innerHTML = formattedHTML;
       } else {
-        throw new Error(data.error || "Empty Response");
+        throw new Error("No output generated");
       }
     } catch (err) {
       console.error(err);
-      document.getElementById('questionsOutput').innerHTML = `<div style="color:red; text-align:center; padding:15px; font-weight:bold;">⚠️ Error: ${err.message}. Check Web App URL or redeploy script.</div>`;
+      document.getElementById('questionsOutput').innerHTML = `<div style="color:red; text-align:center; padding:15px; font-weight:bold;">⚠️ Error generating paper. Please check image size and try again.</div>`;
     } finally {
       loading.style.display = 'none';
     }
