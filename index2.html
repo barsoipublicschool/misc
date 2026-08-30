@@ -22,7 +22,7 @@
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
     .form-group { display: flex; flex-direction: column; }
     .form-group label { font-size: 12px; font-weight: bold; margin-bottom: 3px; }
-    .form-group input { padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+    .form-group input, .form-group textarea { padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
     .full-width { grid-column: span 2; }
 
     .section-counts {
@@ -40,14 +40,7 @@
     .btn { padding: 8px 14px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; display: inline-flex; align-items: center; gap: 5px; }
     .btn-primary { background: #004085; color: white; }
     .btn-success { background: #28a745; color: white; }
-    .btn-secondary { background: #6c757d; color: white; }
-    .btn:hover { opacity: 0.9; }
-
-    #fileInput { display: none; }
-    
-    .preview-container { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-    .thumbnail-box { width: 60px; height: 60px; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
-    .thumbnail-box img { width: 100%; height: 100%; object-fit: cover; }
+    .btn-warning { background: #ffc107; color: #111; }
 
     .paper-container {
       max-width: 800px;
@@ -66,8 +59,6 @@
     .section-title { font-weight: bold; font-size: 12px; margin-top: 10px; margin-bottom: 6px; text-transform: uppercase; background: #f0f0f0; padding: 3px 6px; }
     .question-item { margin-bottom: 8px; font-size: 12px; line-height: 1.35; word-wrap: break-word; }
     .mcq-options { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; margin-left: 15px; margin-top: 3px; font-size: 11.5px; }
-    
-    .loading-spinner { display: none; color: #004085; font-weight: bold; margin-top: 8px; font-size: 13px; }
 
     @media print {
       body { padding: 0; background: white; }
@@ -79,32 +70,28 @@
 <body>
 
   <div class="control-panel">
-    <h2>🎯 Question Paper Generator (Direct API)</h2>
+    <h2>🎯 Question Paper Generator (Gemini Copy-Paste Method)</h2>
     
     <div class="form-grid">
       <div class="form-group full-width">
-        <label>Gemini API Key (Saved in browser)</label>
-        <input type="password" id="inputApiKey" placeholder="AIzaSy..." onchange="saveApiKey()">
-      </div>
-      <div class="form-group full-width">
         <label>Exam Name</label>
-        <input type="text" id="inputExam" value="ANNUAL EXAMINATION - 2026">
+        <input type="text" id="inputExam" value="ANNUAL EXAMINATION - 2026" oninput="syncHeaderInfo()">
       </div>
       <div class="form-group">
         <label>Class</label>
-        <input type="text" id="inputClass" value="Class - VI">
+        <input type="text" id="inputClass" value="Class - VI" oninput="syncHeaderInfo()">
       </div>
       <div class="form-group">
         <label>Subject</label>
-        <input type="text" id="inputSubject" value="English">
+        <input type="text" id="inputSubject" value="English" oninput="syncHeaderInfo()">
       </div>
       <div class="form-group">
         <label>Full Marks (FM)</label>
-        <input type="text" id="inputFM" value="100">
+        <input type="text" id="inputFM" value="100" oninput="syncHeaderInfo()">
       </div>
       <div class="form-group">
         <label>Time</label>
-        <input type="text" id="inputTime" value="2 hrs.">
+        <input type="text" id="inputTime" value="2 hrs." oninput="syncHeaderInfo()">
       </div>
       <div class="form-group full-width">
         <label>Chapter / Instructions Note</label>
@@ -133,15 +120,14 @@
     </div>
 
     <div class="btn-group">
-      <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">📁 Select Multiple Pages</button>
-      <input type="file" id="fileInput" accept="image/*" multiple onchange="handleFileSelect(event)">
-      
-      <button class="btn btn-primary" onclick="generateQuestionPaper()">⚡ Generate Paper with AI</button>
-      <button class="btn btn-success" onclick="printOrSavePDF()">🖨️ Print / Save PDF</button>
+      <button class="btn btn-warning" onclick="copyGeminiPrompt()">📋 Step 1: Copy Gemini Prompt</button>
+      <button class="btn btn-success" onclick="printOrSavePDF()">🖨️ Step 3: Print / Save PDF</button>
     </div>
 
-    <div id="imagePreviewContainer" class="preview-container"></div>
-    <div id="loading" class="loading-spinner">⏳ Generating Paper Directly via Gemini... Please wait</div>
+    <div class="form-group full-width" style="margin-top: 15px;">
+      <label style="color: #004085;">Step 2: Gemini se mila HTML Code yahan Paste Karein:</label>
+      <textarea id="htmlInput" rows="5" placeholder="Gemini ka generated code yahan paste karein..." oninput="renderGeneratedPaper()"></textarea>
+    </div>
   </div>
 
   <div class="paper-container" id="paperArea">
@@ -160,70 +146,12 @@
 
     <div class="instruction">All questions are compulsory.</div>
 
-    <div id="questionsOutput"></div>
+    <div id="questionsOutput">
+      <p style="text-align: center; color: #777; font-style: italic; margin-top: 20px;">Questions yahan dikhenge jab aap HTML paste karenge.</p>
+    </div>
   </div>
 
 <script>
-  let uploadedImages = [];
-
-  // Load API Key from local storage
-  window.onload = function() {
-    const savedKey = localStorage.getItem('gemini_api_key');
-    if (savedKey) document.getElementById('inputApiKey').value = savedKey;
-  };
-
-  function saveApiKey() {
-    const key = document.getElementById('inputApiKey').value.trim();
-    localStorage.setItem('gemini_api_key', key);
-  }
-
-  function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.6) {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const img = new Image();
-        img.onload = function() {
-          let width = img.width;
-          let height = img.height;
-          if (width > height) {
-            if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; }
-          } else {
-            if (height > maxHeight) { width = Math.round((width * maxHeight) / height); height = maxHeight; }
-          }
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-          const dataUrl = canvas.toDataURL('image/jpeg', quality);
-          resolve({ base64: dataUrl.split(',')[1], previewUrl: dataUrl });
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
-  }
-
-  async function handleFileSelect(event) {
-    const files = event.target.files;
-    const previewContainer = document.getElementById('imagePreviewContainer');
-    previewContainer.innerHTML = '';
-    uploadedImages = [];
-
-    if (files && files.length > 0) {
-      for (let i = 0; i < files.length; i++) {
-        const compressed = await compressImage(files[i]);
-        uploadedImages.push({
-          inline_data: { mime_type: "image/jpeg", data: compressed.base64 }
-        });
-        const box = document.createElement('div');
-        box.className = 'thumbnail-box';
-        box.innerHTML = `<img src="${compressed.previewUrl}">`;
-        previewContainer.appendChild(box);
-      }
-    }
-  }
-
   function syncHeaderInfo() {
     document.getElementById('dispFM').innerText = document.getElementById('inputFM').value;
     document.getElementById('dispTime').innerText = document.getElementById('inputTime').value;
@@ -232,14 +160,8 @@
     document.getElementById('dispSubject').innerText = document.getElementById('inputSubject').value;
   }
 
-  async function generateQuestionPaper() {
+  function copyGeminiPrompt() {
     syncHeaderInfo();
-
-    const apiKey = document.getElementById('inputApiKey').value.trim();
-    if (!apiKey) {
-      alert("Kripya Gemini API Key enter karein.");
-      return;
-    }
 
     const subject = document.getElementById('inputSubject').value;
     const className = document.getElementById('inputClass').value;
@@ -250,54 +172,43 @@
     const numShort = parseInt(document.getElementById('countShort').value) || 0;
     const numLong = parseInt(document.getElementById('countLong').value) || 0;
 
-    const loading = document.getElementById('loading');
-    loading.style.display = 'block';
+    const fullPrompt = `You are an examination question generator. Read attached images/chapter carefully and generate a question paper.
 
-    const systemPrompt = `You are a school question paper generator.
-Return ONLY clean HTML output without markdown ticks (\`\`\`html).
+Class: ${className}
+Subject: ${subject}
+Topic/Notes: ${topicPrompt}
 
-Structure:
+Questions Required:
+- MCQs: ${numMcq}
+- Fill in the Blanks: ${numFill}
+- Short Answer Questions: ${numShort}
+- Long Answer Questions: ${numLong}
+
+CRITICAL OUTPUT FORMAT REQUIREMENT:
+Return ONLY clean HTML output code without any markdown tags (do not use \`\`\`html). Use the following HTML classes:
+
 ${numMcq > 0 ? `<div class="section-title">SECTION A: MULTIPLE CHOICE QUESTIONS</div>` : ''}
 ${numFill > 0 ? `<div class="section-title">SECTION B: FILL IN THE BLANKS</div>` : ''}
 ${numShort > 0 ? `<div class="section-title">SECTION C: SHORT ANSWER QUESTIONS</div>` : ''}
 ${numLong > 0 ? `<div class="section-title">SECTION D: LONG ANSWER QUESTIONS</div>` : ''}
 
-MCQ format:
-<div class="question-item">Q1. Question text<div class="mcq-options"><div>(a) Opt 1</div><div>(b) Opt 2</div><div>(c) Opt 3</div><div>(d) Opt 4</div></div></div>`;
+MCQs Format:
+<div class="question-item">Q1. Question text<div class="mcq-options"><div>(a) Option 1</div><div>(b) Option 2</div><div>(c) Option 3</div><div>(d) Option 4</div></div></div>
 
-    const userPrompt = `Class: ${className}, Subject: ${subject}, Topic: ${topicPrompt}. Counts: MCQs=${numMcq}, Fill=${numFill}, Short=${numShort}, Long=${numLong}. Generate suitable paper.`;
+Other Questions Format:
+<div class="question-item">Q1. Question text here</div>`;
 
-    try {
-      const parts = [{ text: userPrompt }];
-      if (uploadedImages.length > 0) {
-        uploadedImages.forEach(img => parts.push(img));
-      }
+    navigator.clipboard.writeText(fullPrompt).then(() => {
+      alert("Prompt Copy ho gaya hai!\n\n1. Ab Gemini Web App open karein.\n2. Apni Images attach karein aur ye Prompt paste kar dein.");
+      window.open("https://gemini.google.com", "_blank");
+    });
+  }
 
-      const payload = {
-        system_instruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ parts: parts }]
-      };
-
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await response.json();
-      
-      if (data.candidates && data.candidates[0].content.parts[0].text) {
-        let textOutput = data.candidates[0].content.parts[0].text;
-        let formattedHTML = textOutput.replace(/```html/g, '').replace(/```/g, '').trim();
-        document.getElementById('questionsOutput').innerHTML = formattedHTML;
-      } else {
-        throw new Error(data.error ? data.error.message : "Response generation failed");
-      }
-    } catch (err) {
-      console.error(err);
-      document.getElementById('questionsOutput').innerHTML = `<div style="color:red; text-align:center; padding:15px; font-weight:bold;">⚠️ Error: ${err.message}</div>`;
-    } finally {
-      loading.style.display = 'none';
+  function renderGeneratedPaper() {
+    let rawText = document.getElementById('htmlInput').value;
+    let cleanHTML = rawText.replace(/```html/g, '').replace(/```/g, '').trim();
+    if (cleanHTML) {
+      document.getElementById('questionsOutput').innerHTML = cleanHTML;
     }
   }
 
