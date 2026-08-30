@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Question Bank Manager & Paper Generator</title>
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #f4f6f9; margin: 0; padding: 15px; }
+    .container { max-width: 900px; margin: 0 auto; }
+    
+    .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    h2, h3 { color: #004085; margin-top: 0; }
+    
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 12px; }
+    .form-group { display: flex; flex-direction: column; }
+    label { font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #333; }
+    input, select, textarea { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+    
+    .btn { padding: 9px 15px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; }
+    .btn-primary { background: #004085; color: white; }
+    .btn-success { background: #28a745; color: white; }
+    .btn-danger { background: #dc3545; color: white; }
+    .btn:hover { opacity: 0.9; }
+
+    .q-item { background: #f8f9fa; border-left: 4px solid #004085; padding: 10px; margin-bottom: 8px; border-radius: 0 4px 4px 0; display: flex; justify-content: space-between; align-items: center; }
+    .q-meta { font-size: 11px; color: #666; margin-top: 4px; }
+    
+    /* Print Layout */
+    .paper-output { display: none; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    .paper-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+    .paper-header h1 { margin: 0; font-size: 22px; font-family: 'Times New Roman', serif; }
+    .paper-meta { display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; margin-top: 8px; font-family: 'Times New Roman', serif; }
+    .paper-question { font-family: 'Times New Roman', serif; font-size: 14px; margin-bottom: 12px; line-height: 1.4; }
+
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white; padding: 0; }
+      .paper-output { display: block !important; box-shadow: none; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Add Question Section -->
+  <div class="card no-print">
+    <h2>➕ Add New Question to Bank</h2>
+    <div class="grid">
+      <div class="form-group">
+        <label>Subject</label>
+        <input type="text" id="addSubject" placeholder="e.g. Science, English">
+      </div>
+      <div class="form-group">
+        <label>Class</label>
+        <input type="text" id="addClass" placeholder="e.g. Class 6">
+      </div>
+      <div class="form-group">
+        <label>Chapter / Topic</label>
+        <input type="text" id="addChapter" placeholder="e.g. Living Organisms">
+      </div>
+      <div class="form-group">
+        <label>Difficulty</label>
+        <select id="addLevel">
+          <option value="Easy">Easy</option>
+          <option value="Medium">Medium</option>
+          <option value="Hard">Hard</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom: 12px;">
+      <label>Question Text</label>
+      <textarea id="addQuestionText" rows="2" placeholder="Write question here..."></textarea>
+    </div>
+    <button class="btn btn-primary" onclick="saveQuestion()">Save Question</button>
+  </div>
+
+  <!-- Generate Paper Section -->
+  <div class="card no-print">
+    <h2>⚡ Generate Test Paper</h2>
+    <div class="grid">
+      <div class="form-group">
+        <label>Select Subject</label>
+        <select id="filterSubject" onchange="loadQuestionsList()"></select>
+      </div>
+      <div class="form-group">
+        <label>Select Class</label>
+        <select id="filterClass" onchange="loadQuestionsList()"></select>
+      </div>
+      <div class="form-group">
+        <label>Number of Questions Needed</label>
+        <input type="number" id="genCount" value="5" min="1">
+      </div>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <button class="btn btn-success" onclick="generateRandomPaper()">Generate Paper</button>
+      <button class="btn btn-primary" onclick="window.print()">🖨️ Print Paper</button>
+    </div>
+  </div>
+
+  <!-- Saved Questions List -->
+  <div class="card no-print">
+    <h3>📂 Saved Questions List (<span id="totalQCount">0</span>)</h3>
+    <div id="questionsBankList"></div>
+  </div>
+
+  <!-- Generated Test Paper Output -->
+  <div class="paper-output" id="paperArea">
+    <div class="paper-header">
+      <h1 id="paperSchoolName">BARSOI PUBLIC SCHOOL</h1>
+      <div>CLASS TEST / QUESTION PAPER</div>
+      <div class="paper-meta">
+        <span>Class: <span id="pClass">-</span></span>
+        <span>Subject: <span id="pSubject">-</span></span>
+        <span>Date: <span id="pDate">-</span></span>
+      </div>
+    </div>
+    <div id="paperQuestionsContainer"></div>
+  </div>
+
+</div>
+
+<script>
+  let questionBank = JSON.parse(localStorage.getItem('myQuestionBank')) || [];
+
+  function init() {
+    updateDropdowns();
+    loadQuestionsList();
+  }
+
+  function saveQuestion() {
+    const subject = document.getElementById('addSubject').value.trim();
+    const className = document.getElementById('addClass').value.trim();
+    const chapter = document.getElementById('addChapter').value.trim();
+    const level = document.getElementById('addLevel').value;
+    const text = document.getElementById('addQuestionText').value.trim();
+
+    if (!subject || !className || !text) {
+      alert("Please fill Subject, Class, and Question text!");
+      return;
+    }
+
+    const newQ = { id: Date.now(), subject, className, chapter, level, text };
+    questionBank.push(newQ);
+    localStorage.setItem('myQuestionBank', JSON.stringify(questionBank));
+
+    document.getElementById('addQuestionText').value = '';
+    updateDropdowns();
+    loadQuestionsList();
+    alert("Question saved successfully!");
+  }
+
+  function deleteQuestion(id) {
+    questionBank = questionBank.filter(q => q.id !== id);
+    localStorage.setItem('myQuestionBank', JSON.stringify(questionBank));
+    updateDropdowns();
+    loadQuestionsList();
+  }
+
+  function updateDropdowns() {
+    const subjects = [...new Set(questionBank.map(q => q.subject))];
+    const classes = [...new Set(questionBank.map(q => q.className))];
+
+    const subSelect = document.getElementById('filterSubject');
+    const classSelect = document.getElementById('filterClass');
+
+    subSelect.innerHTML = '<option value="ALL">All Subjects</option>' + subjects.map(s => `<option value="${s}">${s}</option>`).join('');
+    classSelect.innerHTML = '<option value="ALL">All Classes</option>' + classes.map(c => `<option value="${c}">${c}</option>`).join('');
+  }
+
+  function loadQuestionsList() {
+    const sub = document.getElementById('filterSubject').value;
+    const cls = document.getElementById('filterClass').value;
+    const listContainer = document.getElementById('questionsBankList');
+
+    let filtered = questionBank.filter(q => {
+      const matchSub = sub === 'ALL' || !sub || q.subject === sub;
+      const matchCls = cls === 'ALL' || !cls || q.className === cls;
+      return matchSub && matchCls;
+    });
+
+    document.getElementById('totalQCount').innerText = filtered.length;
+
+    if (filtered.length === 0) {
+      listContainer.innerHTML = '<p style="color:#777;">No questions found.</p>';
+      return;
+    }
+
+    listContainer.innerHTML = filtered.map((q, idx) => `
+      <div class="q-item">
+        <div>
+          <strong>Q${idx + 1}. ${q.text}</strong>
+          <div class="q-meta">${q.subject} | ${q.className} | Chapter: ${q.chapter || 'N/A'} | Level: ${q.level}</div>
+        </div>
+        <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="deleteQuestion(${q.id})">Delete</button>
+      </div>
+    `).join('');
+  }
+
+  function generateRandomPaper() {
+    const sub = document.getElementById('filterSubject').value;
+    const cls = document.getElementById('filterClass').value;
+    const count = parseInt(document.getElementById('genCount').value) || 5;
+
+    let pool = questionBank.filter(q => {
+      const matchSub = sub === 'ALL' || !sub || q.subject === sub;
+      const matchCls = cls === 'ALL' || !cls || q.className === cls;
+      return matchSub && matchCls;
+    });
+
+    if (pool.length === 0) {
+      alert("Selected filters ke hisab se question bank me questions nahi hain!");
+      return;
+    }
+
+    // Shuffle & Pick
+    let shuffled = pool.sort(() => 0.5 - Math.random());
+    let selected = shuffled.slice(0, count);
+
+    // Render Paper Header Info
+    document.getElementById('pClass').innerText = cls !== 'ALL' ? cls : 'General';
+    document.getElementById('pSubject').innerText = sub !== 'ALL' ? sub : 'General';
+    document.getElementById('pDate').innerText = new Date().toLocaleDateString();
+
+    const paperContainer = document.getElementById('paperQuestionsContainer');
+    paperContainer.innerHTML = selected.map((q, idx) => `
+      <div class="paper-question">
+        <strong>Q${idx + 1}.</strong> ${q.text}
+      </div>
+    `).join('');
+
+    document.getElementById('paperArea').style.display = 'block';
+    alert("Paper Generated! Page ke bottom me Scroll karke ya Print Button dakar check karein.");
+  }
+
+  window.onload = init;
+</script>
+
+</body>
+</html>
