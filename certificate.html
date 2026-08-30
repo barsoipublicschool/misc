@@ -7,7 +7,7 @@
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body { background-color: #eef2f5; margin: 0; padding: 15px; }
-    .container { max-width: 900px; margin: 0 auto; }
+    .container { max-width: 950px; margin: 0 auto; }
 
     .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
     h2 { color: #004085; margin-top: 0; font-size: 18px; }
@@ -19,26 +19,36 @@
 
     .btn { padding: 10px 18px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 14px; }
     .btn-primary { background: #004085; color: white; }
-    .btn-success { background: #28a745; color: white; }
     .btn:hover { opacity: 0.9; }
 
-    /* Certificate A4 Landscape Box */
+    /* Certificate Design */
     .cert-preview-area {
-      background: #fff;
+      background: #fffdf9;
       width: 100%;
       aspect-ratio: 1.414 / 1;
-      padding: 30px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.15);
+      padding: 16px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
       border-radius: 4px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
+      position: relative;
+    }
+
+    /* Royal Multi-Layered Border */
+    .cert-outer-border {
+      border: 4px solid #002b5b;
+      padding: 6px;
+      height: 100%;
       position: relative;
       background: #fffdf9;
     }
 
-    .cert-border {
-      border: 6px double #004085;
+    .cert-gold-border {
+      border: 2px solid #d4af37;
+      padding: 4px;
+      height: 100%;
+    }
+
+    .cert-inner-border {
+      border: 2px solid #002b5b;
       padding: 20px;
       height: 100%;
       display: flex;
@@ -48,22 +58,55 @@
       position: relative;
     }
 
-    .school-name { font-family: 'Times New Roman', serif; font-size: 28px; font-weight: bold; color: #004085; text-transform: uppercase; margin: 0; }
-    .school-sub { font-size: 12px; letter-spacing: 1px; color: #555; font-weight: 600; }
-    .cert-title { font-family: 'Times New Roman', serif; font-size: 24px; font-weight: bold; color: #8b0000; text-transform: uppercase; margin: 15px 0 10px 0; border-bottom: 2px solid #8b0000; display: inline-block; padding-bottom: 4px; }
+    /* Decorative Corner Elements */
+    .corner-decoration {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      border: 3px solid #d4af37;
+    }
+    .top-left { top: 12px; left: 12px; border-right: none; border-bottom: none; }
+    .top-right { top: 12px; right: 12px; border-left: none; border-bottom: none; }
+    .bottom-left { bottom: 12px; left: 12px; border-right: none; border-top: none; }
+    .bottom-right { bottom: 12px; right: 12px; border-left: none; border-top: none; }
 
-    .cert-body { font-family: 'Times New Roman', serif; font-size: 16px; line-height: 1.8; color: #222; margin: 15px 0; }
-    .highlight { font-weight: bold; font-size: 18px; text-decoration: underline; color: #000; }
+    /* Header & Logos Layout */
+    .header-layout {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
 
-    .cert-footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 20px; padding: 0 20px; }
-    .sig-box { text-align: center; width: 150px; font-family: 'Times New Roman', serif; font-size: 13px; font-weight: bold; }
-    .sig-line { border-top: 1px dashed #333; margin-top: 40px; padding-top: 4px; }
+    .school-logo {
+      width: 75px;
+      height: 75px;
+      object-fit: contain;
+    }
+
+    .header-text {
+      flex-grow: 1;
+      text-align: center;
+      padding: 0 10px;
+    }
+
+    .school-name { font-family: 'Georgia', 'Times New Roman', serif; font-size: 26px; font-weight: bold; color: #002b5b; text-transform: uppercase; margin: 0; letter-spacing: 0.5px; }
+    .school-sub { font-size: 11px; letter-spacing: 1px; color: #555; font-weight: 700; margin-top: 3px; }
+    
+    .cert-title { font-family: 'Georgia', 'Times New Roman', serif; font-size: 22px; font-weight: bold; color: #8b0000; text-transform: uppercase; margin: 12px 0 8px 0; letter-spacing: 1.5px; display: inline-block; border-bottom: 2px double #8b0000; padding-bottom: 2px; }
+
+    .cert-body { font-family: 'Georgia', 'Times New Roman', serif; font-size: 15px; line-height: 1.85; color: #222; margin: 15px 15px; text-align: center; }
+    .highlight { font-weight: bold; font-size: 16px; text-decoration: underline; color: #000; padding: 0 4px; }
+
+    .cert-footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 15px; padding: 0 30px; }
+    .sig-box { text-align: center; width: 140px; font-family: 'Georgia', 'Times New Roman', serif; font-size: 12px; font-weight: bold; }
+    .sig-line { border-top: 1px solid #333; margin-top: 45px; padding-top: 4px; }
 
     @media print {
       .no-print { display: none !important; }
       body { background: white; padding: 0; }
       .container { max-width: 100%; }
-      .cert-preview-area { box-shadow: none; width: 100%; height: 100vh; page-break-after: always; }
+      .cert-preview-area { box-shadow: none; width: 100%; height: 100vh; page-break-after: always; padding: 10px; }
     }
   </style>
 </head>
@@ -109,30 +152,46 @@
 
   <!-- Printable Certificate Area -->
   <div class="cert-preview-area">
-    <div class="cert-border">
-      
-      <div>
-        <div class="school-name">Barsoi Public School</div>
-        <div class="school-sub">BARSOI, KATIHAR, BIHAR | AFFILIATED & RECOGNIZED</div>
-        <div id="dispCertTitle" class="cert-title">CERTIFICATE OF MERIT</div>
-      </div>
+    <div class="cert-outer-border">
+      <div class="cert-gold-border">
+        <div class="cert-inner-border">
+          
+          <div class="corner-decoration top-left"></div>
+          <div class="corner-decoration top-right"></div>
+          <div class="corner-decoration bottom-left"></div>
+          <div class="corner-decoration bottom-right"></div>
 
-      <div class="cert-body" id="dispCertBody">
-        <!-- Dynamic Content Injected Here -->
-      </div>
+          <div>
+            <div class="header-layout">
+              <img src="https://lh3.googleusercontent.com/d/14JG21SYtSpghaukrY6_QTB-LCYPZ8gkE" class="school-logo" alt="Logo Left">
+              <div class="header-text">
+                <div class="school-name">BARSOI PUBLIC SCHOOL</div>
+                <div class="school-sub">BARSOI, KATIHAR, BIHAR | AFFILIATED & RECOGNIZED</div>
+              </div>
+              <img src="https://lh3.googleusercontent.com/d/14JG21SYtSpghaukrY6_QTB-LCYPZ8gkE" class="school-logo" alt="Logo Right">
+            </div>
+            
+            <div id="dispCertTitle" class="cert-title">CERTIFICATE OF MERIT</div>
+          </div>
 
-      <div class="cert-footer">
-        <div class="sig-box">
-          <div>Date: <span id="dispDate">30/08/2026</span></div>
-        </div>
-        <div class="sig-box">
-          <div class="sig-line">Class Teacher</div>
-        </div>
-        <div class="sig-box">
-          <div class="sig-line">Principal / Director</div>
+          <div class="cert-body" id="dispCertBody">
+            <!-- Dynamic Content -->
+          </div>
+
+          <div class="cert-footer">
+            <div class="sig-box">
+              <div>Date: <span id="dispDate">30/08/2026</span></div>
+            </div>
+            <div class="sig-box">
+              <div class="sig-line">Class Teacher</div>
+            </div>
+            <div class="sig-box">
+              <div class="sig-line">Principal / Director</div>
+            </div>
+          </div>
+
         </div>
       </div>
-
     </div>
   </div>
 
