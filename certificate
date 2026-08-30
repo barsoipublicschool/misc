@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auto Certificate Generator - Barsoi Public School</title>
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #eef2f5; margin: 0; padding: 15px; }
+    .container { max-width: 900px; margin: 0 auto; }
+
+    .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    h2 { color: #004085; margin-top: 0; font-size: 18px; }
+
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 15px; }
+    .form-group { display: flex; flex-direction: column; }
+    label { font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #333; }
+    input, select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+
+    .btn { padding: 10px 18px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 14px; }
+    .btn-primary { background: #004085; color: white; }
+    .btn-success { background: #28a745; color: white; }
+    .btn:hover { opacity: 0.9; }
+
+    /* Certificate A4 Landscape Box */
+    .cert-preview-area {
+      background: #fff;
+      width: 100%;
+      aspect-ratio: 1.414 / 1;
+      padding: 30px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.15);
+      border-radius: 4px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      background: #fffdf9;
+    }
+
+    .cert-border {
+      border: 6px double #004085;
+      padding: 20px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      text-align: center;
+      position: relative;
+    }
+
+    .school-name { font-family: 'Times New Roman', serif; font-size: 28px; font-weight: bold; color: #004085; text-transform: uppercase; margin: 0; }
+    .school-sub { font-size: 12px; letter-spacing: 1px; color: #555; font-weight: 600; }
+    .cert-title { font-family: 'Times New Roman', serif; font-size: 24px; font-weight: bold; color: #8b0000; text-transform: uppercase; margin: 15px 0 10px 0; border-bottom: 2px solid #8b0000; display: inline-block; padding-bottom: 4px; }
+
+    .cert-body { font-family: 'Times New Roman', serif; font-size: 16px; line-height: 1.8; color: #222; margin: 15px 0; }
+    .highlight { font-weight: bold; font-size: 18px; text-decoration: underline; color: #000; }
+
+    .cert-footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 20px; padding: 0 20px; }
+    .sig-box { text-align: center; width: 150px; font-family: 'Times New Roman', serif; font-size: 13px; font-weight: bold; }
+    .sig-line { border-top: 1px dashed #333; margin-top: 40px; padding-top: 4px; }
+
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white; padding: 0; }
+      .container { max-width: 100%; }
+      .cert-preview-area { box-shadow: none; width: 100%; height: 100vh; page-break-after: always; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Controls Panel -->
+  <div class="card no-print">
+    <h2>🎓 Auto Certificate Generator</h2>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Certificate Type</label>
+        <select id="certType" onchange="updateCertificate()">
+          <option value="Merit">Academic Merit Certificate</option>
+          <option value="Sports">Sports Achievement Certificate</option>
+          <option value="Bonafide">Bonafide Student Certificate</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Student Name</label>
+        <input type="text" id="stuName" value="Rohan Kumar" oninput="updateCertificate()">
+      </div>
+      <div class="form-group">
+        <label>Father's Name</label>
+        <input type="text" id="fatherName" value="Shri Suresh Kumar" oninput="updateCertificate()">
+      </div>
+      <div class="form-group">
+        <label>Class & Section</label>
+        <input type="text" id="stuClass" value="Class VI - A" oninput="updateCertificate()">
+      </div>
+      <div class="form-group">
+        <label>Roll / Reg No.</label>
+        <input type="text" id="stuRoll" value="BPS/2026/042" oninput="updateCertificate()">
+      </div>
+      <div class="form-group">
+        <label>Event / Achievement Details</label>
+        <input type="text" id="eventText" value="1st Rank in Annual Examination 2026" oninput="updateCertificate()">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="window.print()">🖨️ Print / Download PDF</button>
+  </div>
+
+  <!-- Printable Certificate Area -->
+  <div class="cert-preview-area">
+    <div class="cert-border">
+      
+      <div>
+        <div class="school-name">Barsoi Public School</div>
+        <div class="school-sub">BARSOI, KATIHAR, BIHAR | AFFILIATED & RECOGNIZED</div>
+        <div id="dispCertTitle" class="cert-title">CERTIFICATE OF MERIT</div>
+      </div>
+
+      <div class="cert-body" id="dispCertBody">
+        <!-- Dynamic Content Injected Here -->
+      </div>
+
+      <div class="cert-footer">
+        <div class="sig-box">
+          <div>Date: <span id="dispDate">30/08/2026</span></div>
+        </div>
+        <div class="sig-box">
+          <div class="sig-line">Class Teacher</div>
+        </div>
+        <div class="sig-box">
+          <div class="sig-line">Principal / Director</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function updateCertificate() {
+    const type = document.getElementById('certType').value;
+    const name = document.getElementById('stuName').value || '__________';
+    const father = document.getElementById('fatherName').value || '__________';
+    const cls = document.getElementById('stuClass').value || '__________';
+    const roll = document.getElementById('stuRoll').value || '__________';
+    const eventText = document.getElementById('eventText').value || '__________';
+
+    const titleElem = document.getElementById('dispCertTitle');
+    const bodyElem = document.getElementById('dispCertBody');
+
+    document.getElementById('dispDate').innerText = new Date().toLocaleDateString('en-GB');
+
+    if (type === 'Merit') {
+      titleElem.innerText = 'CERTIFICATE OF MERIT';
+      bodyElem.innerHTML = `This is to proudly certify that <span class="highlight">${name}</span>, Son/Daughter of <span class="highlight">${father}</span>, Roll No. <span class="highlight">${roll}</span>, student of <span class="highlight">${cls}</span>, has successfully secured <span class="highlight">${eventText}</span>. We wish them a bright future.`;
+    } else if (type === 'Sports') {
+      titleElem.innerText = 'SPORTS ACHIEVEMENT CERTIFICATE';
+      bodyElem.innerHTML = `This certificate is awarded to <span class="highlight">${name}</span>, Class <span class="highlight">${cls}</span>, for outstanding performance and securing position in <span class="highlight">${eventText}</span> during the Annual School Sports Meet.`;
+    } else if (type === 'Bonafide') {
+      titleElem.innerText = 'BONAFIDE CERTIFICATE';
+      bodyElem.innerHTML = `This is to certify that <span class="highlight">${name}</span>, Son/Daughter of <span class="highlight">${father}</span>, is a bonafide student of <span class="highlight">${cls}</span> (Roll No: <span class="highlight">${roll}</span>) of Barsoi Public School for the academic session 2026-2027. His/Her conduct in the school has been good.`;
+    }
+  }
+
+  window.onload = updateCertificate;
+</script>
+
+</body>
+</html>
