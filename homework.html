@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Homework & Notice Generator - Barsoi Public School</title>
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #eef2f5; margin: 0; padding: 15px; }
+    .container { max-width: 900px; margin: 0 auto; }
+
+    .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    h2 { color: #004085; margin-top: 0; font-size: 18px; }
+
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 15px; }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group.full-width { grid-column: 1 / -1; }
+    label { font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #333; }
+    input, select, textarea { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+    textarea { resize: vertical; min-height: 70px; }
+
+    .btn { padding: 10px 18px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 14px; }
+    .btn-primary { background: #004085; color: white; }
+    .btn:hover { opacity: 0.9; }
+
+    /* Notice Card Styling */
+    .notice-card {
+      background: #ffffff;
+      border: 3px solid #002b5b;
+      border-radius: 6px;
+      padding: 20px;
+      position: relative;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    .notice-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid #002b5b;
+      padding-bottom: 12px;
+      margin-bottom: 15px;
+    }
+
+    .school-logo { width: 70px; height: 70px; object-fit: contain; }
+    .header-text { text-align: center; flex-grow: 1; padding: 0 10px; }
+    .school-title { font-size: 22px; font-weight: bold; color: #002b5b; margin: 0; }
+    .school-sub { font-size: 11px; color: #555; font-weight: 600; margin-top: 2px; }
+
+    .notice-meta {
+      display: flex;
+      justify-content: space-between;
+      background: #f0f4f8;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: bold;
+      color: #004085;
+      margin-bottom: 15px;
+    }
+
+    .notice-body-container {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    .notice-content {
+      flex-grow: 1;
+      font-size: 15px;
+      line-height: 1.6;
+      color: #222;
+      white-space: pre-line;
+    }
+
+    .qr-box {
+      text-align: center;
+      min-width: 140px;
+      border: 1px dashed #002b5b;
+      padding: 8px;
+      border-radius: 6px;
+      background: #fafafa;
+    }
+
+    .qr-box img {
+      width: 120px;
+      height: 120px;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .qr-label {
+      font-size: 10px;
+      font-weight: bold;
+      color: #555;
+      margin-top: 5px;
+    }
+
+    .notice-footer {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 25px;
+      padding-top: 10px;
+      border-top: 1px solid #ddd;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white; padding: 0; }
+      .container { max-width: 100%; }
+      .notice-card { border: 2px solid #002b5b; box-shadow: none; page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Control Panel -->
+  <div class="card no-print">
+    <h2>📌 Smart Homework & Notice Generator</h2>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Category</label>
+        <select id="postType" onchange="generateNotice()">
+          <option value="Daily Homework">Daily Homework</option>
+          <option value="Important Notice">Important Notice</option>
+          <option value="Exam Schedule">Exam Schedule</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Class & Section</label>
+        <input type="text" id="targetClass" value="Class V - B" oninput="generateNotice()">
+      </div>
+      <div class="form-group">
+        <label>Subject (If Homework)</label>
+        <input type="text" id="subName" value="Mathematics & Science" oninput="generateNotice()">
+      </div>
+      <div class="form-group">
+        <label>Submission / Due Date</label>
+        <input type="date" id="dueDate" onchange="generateNotice()">
+      </div>
+      <div class="form-group full-width">
+        <label>Homework / Notice Details</label>
+        <textarea id="noticeText" oninput="generateNotice()">1. Math: Complete Exercise 4.2 (Q.No 1 to 10) in HW notebook.
+2. Science: Read Chapter 5 "Plant Life" and draw a labeled diagram of a flower.</textarea>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="window.print()">🖨️ Print Notice / QR Sheet</button>
+  </div>
+
+  <!-- Printable Notice Board Card -->
+  <div class="notice-card">
+    <div class="notice-header">
+      <img src="https://lh3.googleusercontent.com/d/14JG21SYtSpghaukrY6_QTB-LCYPZ8gkE" class="school-logo" alt="Logo">
+      <div class="header-text">
+        <div class="school-title">BARSOI PUBLIC SCHOOL</div>
+        <div class="school-sub">BARSOI, KATIHAR, BIHAR | OFFICIAL NOTICE BOARD</div>
+      </div>
+      <img src="https://lh3.googleusercontent.com/d/14JG21SYtSpghaukrY6_QTB-LCYPZ8gkE" class="school-logo" alt="Logo">
+    </div>
+
+    <div class="notice-meta">
+      <div>TYPE: <span id="dispType">DAILY HOMEWORK</span></div>
+      <div>CLASS: <span id="dispClass">CLASS V - B</span></div>
+      <div>DATE: <span id="dispDate">30/08/2026</span></div>
+    </div>
+
+    <div class="notice-body-container">
+      <div class="notice-content">
+        <div style="margin-bottom: 8px; font-weight: bold; color: #8b0000;" id="dispSubjectHead">Subject: Mathematics & Science</div>
+        <div id="dispBodyText">
+          <!-- Text Content -->
+        </div>
+      </div>
+
+      <div class="qr-box">
+        <img id="qrImg" src="" alt="QR Code">
+        <div class="qr-label">Scan for Digital Copy</div>
+      </div>
+    </div>
+
+    <div class="notice-footer">
+      <div>Due Date: <span id="dispDueDate">Next Working Day</span></div>
+      <div>Issued By: Subject Teacher / Admin</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function generateNotice() {
+    const type = document.getElementById('postType').value;
+    const cls = document.getElementById('targetClass').value || 'All Classes';
+    const sub = document.getElementById('subName').value || 'General';
+    const text = document.getElementById('noticeText').value || 'No content provided.';
+    const due = document.getElementById('dueDate').value;
+
+    document.getElementById('dispType').innerText = type.toUpperCase();
+    document.getElementById('dispClass').innerText = cls.toUpperCase();
+    document.getElementById('dispDate').innerText = new Date().toLocaleDateString('en-GB');
+
+    if (due) {
+      const d = new Date(due);
+      document.getElementById('dispDueDate').innerText = d.toLocaleDateString('en-GB');
+    } else {
+      document.getElementById('dispDueDate').innerText = 'Next Working Day';
+    }
+
+    if (type === 'Daily Homework') {
+      document.getElementById('dispSubjectHead').style.display = 'block';
+      document.getElementById('dispSubjectHead').innerText = 'Subject: ' + sub;
+    } else {
+      document.getElementById('dispSubjectHead').style.display = 'none';
+    }
+
+    document.getElementById('dispBodyText').innerText = text;
+
+    // Generate QR Code dynamically encoding notice content
+    const qrData = encodeURIComponent(`[${type}] Class: ${cls}\nSubject: ${sub}\nDate: ${new Date().toLocaleDateString()}\n\nContent:\n${text}`);
+    document.getElementById('qrImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${qrData}`;
+  }
+
+  // Set default date picker
+  document.getElementById('dueDate').valueAsDate = new Date();
+  window.onload = generateNotice;
+</script>
+
+</body>
+</html>
