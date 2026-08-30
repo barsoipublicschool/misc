@@ -45,7 +45,10 @@
     .btn:hover { opacity: 0.9; }
 
     #fileInput { display: none; }
-    #imagePreview { max-height: 90px; display: none; margin-top: 8px; border-radius: 4px; border: 1px solid #ddd; }
+    
+    .preview-container { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .thumbnail-box { position: relative; width: 60px; height: 60px; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; background: #f8f9fa; }
+    .thumbnail-box img { width: 100%; height: 100%; object-fit: cover; }
 
     /* Paper Styling */
     .paper-container {
@@ -90,11 +93,11 @@
       </div>
       <div class="form-group">
         <label>Class</label>
-        <input type="text" id="inputClass" value="Class - XI">
+        <input type="text" id="inputClass" value="Class - VI">
       </div>
       <div class="form-group">
         <label>Subject</label>
-        <input type="text" id="inputSubject" value="Science (Biology)">
+        <input type="text" id="inputSubject" value="English">
       </div>
       <div class="form-group">
         <label>Full Marks (FM)</label>
@@ -105,8 +108,8 @@
         <input type="text" id="inputTime" value="2 hrs.">
       </div>
       <div class="form-group full-width">
-        <label>Topic Name / Instructions</label>
-        <input type="text" id="inputPrompt" value="Cell Structure and Functions">
+        <label>Chapter / Instructions / Topic Note</label>
+        <input type="text" id="inputPrompt" value="Poorvi Grade 6 - Rama Natha and the Magic Potion">
       </div>
     </div>
 
@@ -122,24 +125,24 @@
       </div>
       <div class="form-group">
         <label>Short Qs</label>
-        <input type="number" id="countShort" value="7" min="0">
+        <input type="number" id="countShort" value="5" min="0">
       </div>
       <div class="form-group">
         <label>Long Qs</label>
-        <input type="number" id="countLong" value="5" min="0">
+        <input type="number" id="countLong" value="3" min="0">
       </div>
     </div>
 
     <div class="btn-group">
-      <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">📷 / 🖼️ Upload Handwritten Page Photo</button>
-      <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)">
+      <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">📁 Select Multiple Pages / Chapter Photos</button>
+      <input type="file" id="fileInput" accept="image/*" multiple onchange="handleFileSelect(event)">
       
       <button class="btn btn-primary" onclick="generateQuestionPaper()">⚡ Generate Paper with AI</button>
       <button class="btn btn-success" onclick="printOrSavePDF()">🖨️ Print / Save as PDF</button>
     </div>
 
-    <img id="imagePreview" alt="Uploaded Handwritten Photo Preview">
-    <div id="loading" class="loading-spinner">⏳ Reading Handwritten Content / Generating Paper... Please wait</div>
+    <div id="imagePreviewContainer" class="preview-container"></div>
+    <div id="loading" class="loading-spinner">⏳ Reading Chapters / Handwritten Images & Generating Paper... Please wait</div>
   </div>
 
   <div class="paper-container" id="paperArea">
@@ -152,8 +155,8 @@
     </div>
 
     <div class="meta-row">
-      <span><span id="dispClass">Class - XI</span></span>
-      <span>Subject - <span id="dispSubject">Science (Biology)</span></span>
+      <span><span id="dispClass">Class - VI</span></span>
+      <span>Subject - <span id="dispSubject">English</span></span>
     </div>
 
     <div class="instruction">All questions are compulsory.</div>
@@ -163,21 +166,34 @@
 
 <script>
   const WORKER_URL = "https://barsoi-ai-proxy.barsoipublicschool26.workers.dev/";
-  let base64Image = null;
-  let imageMimeType = "image/jpeg";
+  let uploadedImages = []; // Array to hold multiple images
 
   function handleFileSelect(event) {
-    const file = event.target.files[0];
-    if (file) {
-      imageMimeType = file.type || "image/jpeg";
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        base64Image = e.target.result.split(',')[1];
-        const preview = document.getElementById('imagePreview');
-        preview.src = e.target.result;
-        preview.style.display = 'block';
-      };
-      reader.readAsDataURL(file);
+    const files = event.target.files;
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    previewContainer.innerHTML = '';
+    uploadedImages = [];
+
+    if (files && files.length > 0) {
+      Array.from(files).forEach((file, index) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const base64Data = e.target.result.split(',')[1];
+          uploadedImages.push({
+            inline_data: {
+              mime_type: file.type || "image/jpeg",
+              data: base64Data
+            }
+          });
+
+          // Render Thumbnail
+          const box = document.createElement('div');
+          box.className = 'thumbnail-box';
+          box.innerHTML = `<img src="${e.target.result}" alt="Page ${index+1}">`;
+          previewContainer.appendChild(box);
+        };
+        reader.readAsDataURL(file);
+      });
     }
   }
 
@@ -204,28 +220,31 @@
     const loading = document.getElementById('loading');
     loading.style.display = 'block';
 
-    const systemPrompt = `You are an examination paper generator.
-If an image is uploaded, perform OCR: read handwritten text/questions from the image and use them.
-If no image, generate fresh unique questions for Subject: "${subject}", Topic: "${topicPrompt}".
+    const systemPrompt = `You are an expert school examination question paper creator. 
 
-Return ONLY clean raw HTML without markdown code blocks (\`\`\`html).
-CRITICAL: Every question must be distinct. DO NOT REPEAT ANY QUESTION TEXT.
+CRITICAL INSTRUCTIONS FOR IMAGE PROCESSING:
+1. IF THE UPLOADED IMAGES ARE TEXTBOOK CHAPTERS / STORIES: Thoroughly read and comprehend the text, characters, events, and vocabulary from ALL provided pages. Generate high-quality examination questions STRICTLY based on the story/lesson content.
+2. IF THE UPLOADED IMAGES ARE HANDWRITTEN QUESTION PAPERS: Transcribe and convert them word-for-word (hoo bahoo) into the clean question paper format.
+3. OUTPUT FORMAT: Return ONLY clean raw HTML code without any markdown wrappers like \`\`\`html.
 
-HTML Sections Structure:
+Required Sections Structure & Counts:
 ${numMcq > 0 ? `<div class="section-title">SECTION A: MULTIPLE CHOICE QUESTIONS</div> (${numMcq} MCQs)` : ''}
-${numFill > 0 ? `<div class="section-title">SECTION B: FILL IN THE BLANKS</div> (${numFill} distinct Fill-in-the-blank questions)` : ''}
-${numShort > 0 ? `<div class="section-title">SECTION C: SHORT ANSWER QUESTIONS</div> (${numShort} Short questions)` : ''}
-${numLong > 0 ? `<div class="section-title">SECTION D: LONG ANSWER QUESTIONS</div> (${numLong} Long questions)` : ''}
+${numFill > 0 ? `<div class="section-title">SECTION B: FILL IN THE BLANKS</div> (${numFill} questions)` : ''}
+${numShort > 0 ? `<div class="section-title">SECTION C: SHORT ANSWER QUESTIONS</div> (${numShort} questions)` : ''}
+${numLong > 0 ? `<div class="section-title">SECTION D: LONG ANSWER QUESTIONS</div> (${numLong} questions)` : ''}
 
-MCQ format: <div class="question-item">Q1. Question text<div class="mcq-options"><div>(a) A</div><div>(b) B</div><div>(c) C</div><div>(d) D</div></div></div>
-Numbering must be continuous Q1 to Q${numMcq + numFill + numShort + numLong}.`;
+MCQ format: <div class="question-item">Q1. Question text<div class="mcq-options"><div>(a) Option 1</div><div>(b) Option 2</div><div>(c) Option 3</div><div>(d) Option 4</div></div></div>
+Number all questions continuously from Q1 to the total count. Ensure absolute relevance to the provided chapter/text.`;
 
-    const userPrompt = `Subject: ${subject}, Topic: ${topicPrompt}, Class: ${className}. Required Q Counts: MCQs=${numMcq}, FillInBlanks=${numFill}, Short=${numShort}, Long=${numLong}. Read image text if available.`;
+    const userPrompt = `Class: ${className}, Subject: ${subject}, Topic/Context: ${topicPrompt}. Generate exact questions based on the attached page(s). Counts: MCQs=${numMcq}, FillBlanks=${numFill}, Short=${numShort}, Long=${numLong}.`;
 
     try {
+      // Build content parts with text prompt + all uploaded images
       const parts = [{ text: userPrompt }];
-      if (base64Image) {
-        parts.push({ inline_data: { mime_type: imageMimeType, data: base64Image } });
+      if (uploadedImages.length > 0) {
+        uploadedImages.forEach(img => {
+          parts.push(img);
+        });
       }
 
       const payload = {
@@ -239,7 +258,7 @@ Numbering must be continuous Q1 to Q${numMcq + numFill + numShort + numLong}.`;
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) throw new Error("Worker Error");
+      if (!response.ok) throw new Error("Worker Response Failed");
 
       const data = await response.json();
       let textOutput = "";
@@ -248,122 +267,24 @@ Numbering must be continuous Q1 to Q${numMcq + numFill + numShort + numLong}.`;
         textOutput = data.candidates[0].content.parts[0].text;
       }
 
-      if (textOutput && textOutput.trim().length > 60) {
+      if (textOutput && textOutput.trim().length > 50) {
         let formattedHTML = textOutput.replace(/```html/g, '').replace(/```/g, '').trim();
         document.getElementById('questionsOutput').innerHTML = formattedHTML;
       } else {
-        generateSubjectAwareFallback(subject, topicPrompt, numMcq, numFill, numShort, numLong);
+        throw new Error("Empty AI Output");
       }
     } catch (err) {
-      console.warn("AI response delay/error. Generating unique fallback paper.", err);
-      generateSubjectAwareFallback(subject, topicPrompt, numMcq, numFill, numShort, numLong);
+      console.warn("AI Generation Error:", err);
+      document.getElementById('questionsOutput').innerHTML = `<div style="color:red; text-align:center; padding:15px; font-weight:bold;">⚠️ AI could not process the images or connection timed out. Please check your network or try uploading clearer images.</div>`;
     } finally {
       loading.style.display = 'none';
     }
-  }
-
-  // Dynamic Multi-Subject Backup Paper Generator
-  function generateSubjectAwareFallback(subject, topic, mcqCount, fillCount, shortCount, longCount) {
-    let qNum = 1;
-    let html = "";
-    const isBioOrScience = /bio|science|chem|phys|botany|zoology/i.test(subject);
-
-    const mcqPool = isBioOrScience ? [
-      { q: `Which organelle is responsible for ATP energy production during metabolic activities in ${topic}?`, opts: ["(a) Mitochondria", "(b) Chloroplast", "(c) Nucleus", "(d) Ribosome"] },
-      { q: `What is the chemical composition of the primary membrane structure in ${topic}?`, opts: ["(a) Phospholipid bilayer", "(b) Cellulose", "(c) Chitin", "(d) Peptidoglycan"] },
-      { q: `Which molecule serves as the direct hereditary carrier within ${topic}?`, opts: ["(a) DNA", "(b) RNA", "(c) ATP", "(d) Glucose"] },
-      { q: `Which structure acts as a selective barrier regulating substance entry in ${topic}?`, opts: ["(a) Plasma membrane", "(b) Cell wall", "(c) Endoplasmic Reticulum", "(d) Lysosome"] },
-      { q: `Protein synthesis in cells related to ${topic} takes place mainly on:`, opts: ["(a) Ribosomes", "(b) Golgi body", "(c) Vacuole", "(d) Peroxisome"] }
-    ] : [
-      { q: `Identify the main classification rule associated with ${topic}:`, opts: ["(a) Option A", "(b) Option B", "(c) Option C", "(d) Option D"] },
-      { q: `Which statement correctly defines ${topic}?`, opts: ["(a) Statement 1", "(b) Statement 2", "(c) Statement 3", "(d) Statement 4"] }
-    ];
-
-    const fillPool = isBioOrScience ? [
-      `The protective outer boundary in plant cells involved in ${topic} is known as ____________.`,
-      `The semi-fluid matrix filling the interior cell volume in ${topic} is called ____________.`,
-      `The nucleolus present inside ${topic} is the site of active ____________ synthesis.`,
-      `Hydrolytic enzymes used for cellular digestion in ${topic} are located in ____________.`,
-      `Cellular division responsible for somatic growth in ${topic} is called ____________.`,
-      `Aerobic respiration in ${topic} produces ATP inside the ____________.`
-    ] : [
-      `The fundamental definition of ${topic} refers to ____________.`,
-      `In sentence structure / mathematical logic, ${topic} is represented by ____________.`,
-      `The basic principle governing ${topic} requires ____________.`,
-      `An essential characteristic property of ${topic} is ____________.`,
-      `While analyzing ${topic}, the resulting key factor is ____________.`
-    ];
-
-    const shortPool = isBioOrScience ? [
-      `Explain the structural organization and physiological importance of ${topic}.`,
-      `Differentiate between Prokaryotic and Eukaryotic characteristics in relation to ${topic}.`,
-      `Describe the fluid mosaic model or active transport mechanisms in ${topic}.`,
-      `What are the functions of Endoplasmic Reticulum and Golgi apparatus in ${topic}?`,
-      `Compare plant and animal cellular features related to ${topic}.`,
-      `Explain how cell organelles maintain homeostatic balance in ${topic}.`
-    ] : [
-      `Define ${topic} with two suitable examples.`,
-      `Explain the key rules and exceptions related to ${topic}.`,
-      `Differentiate between the primary categories of ${topic}.`
-    ];
-
-    const longPool = isBioOrScience ? [
-      `Describe the detailed structure and organelle functions in ${topic} with a neat labeled diagram.`,
-      `Elaborate on Mitosis and Meiosis cell division stages and their biological significance in ${topic}.`,
-      `Explain active and passive transport mechanisms across cell membranes in ${topic}.`
-    ] : [
-      `Write a comprehensive explanatory note on ${topic} with relevant examples and rules.`,
-      `Discuss the importance and practical applications of ${topic} in detail.`
-    ];
-
-    if (mcqCount > 0) {
-      html += `<div class="section-title">SECTION A: MULTIPLE CHOICE QUESTIONS</div>`;
-      for (let i = 0; i < mcqCount; i++) {
-        let item = mcqPool[i % mcqPool.length];
-        html += `<div class="question-item">Q${qNum++}. ${item.q}
-          <div class="mcq-options">
-            <div>${item.opts[0]}</div><div>${item.opts[1]}</div>
-            <div>${item.opts[2]}</div><div>${item.opts[3]}</div>
-          </div>
-        </div>`;
-      }
-    }
-
-    if (fillCount > 0) {
-      html += `<div class="section-title">SECTION B: FILL IN THE BLANKS</div>`;
-      for (let i = 0; i < fillCount; i++) {
-        let sentence = fillPool[i % fillPool.length];
-        html += `<div class="question-item">Q${qNum++}. ${sentence}</div>`;
-      }
-    }
-
-    if (shortCount > 0) {
-      html += `<div class="section-title">SECTION C: SHORT ANSWER QUESTIONS</div>`;
-      for (let i = 0; i < shortCount; i++) {
-        let text = shortPool[i % shortPool.length];
-        html += `<div class="question-item">Q${qNum++}. ${text}</div>`;
-      }
-    }
-
-    if (longCount > 0) {
-      html += `<div class="section-title">SECTION D: LONG ANSWER QUESTIONS</div>`;
-      for (let i = 0; i < longCount; i++) {
-        let text = longPool[i % longPool.length];
-        html += `<div class="question-item">Q${qNum++}. ${text}</div>`;
-      }
-    }
-
-    document.getElementById('questionsOutput').innerHTML = html;
   }
 
   function printOrSavePDF() {
     syncHeaderInfo();
     window.print();
   }
-
-  window.onload = function() {
-    generateQuestionPaper();
-  };
 </script>
 
 </body>
