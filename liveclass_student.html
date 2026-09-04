@@ -184,6 +184,8 @@
 
         // 4. View Lectures (Pure Student View - No Admin Forms)
         async function viewLectures(courseId, courseTitle) {
+    window.location.href = `liveclass_learn.html?courseId=${courseId}`;
+}
             Swal.fire({
                 title: 'Loading Lectures...',
                 allowOutsideClick: false,
