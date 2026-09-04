@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Classroom - Barsoi Public School</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- SweetAlert2 CSS & JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="bg-gray-900 text-white font-sans min-h-screen pb-12">
+
+    <!-- Navbar -->
+    <nav class="bg-gray-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center sticky top-0 z-40 shadow-lg">
+        <div class="flex items-center gap-3">
+            <a href="index.html" class="bg-gray-700 hover:bg-gray-600 text-gray-300 p-2 rounded-lg text-sm transition">
+                <i class="fa-solid fa-arrow-left mr-1"></i> Dashboard
+            </a>
+            <span class="text-lg font-bold tracking-wide border-l border-gray-700 pl-3">Course Classroom</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="bg-blue-900 text-blue-300 text-xs px-3 py-1 rounded-full border border-blue-700 font-semibold" id="activeCourseBadge">
+                Loading Course...
+            </span>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 mt-6">
+
+        <!-- Course Header Info -->
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-6 mb-8 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h1 id="courseTitle" class="text-2xl font-bold text-gray-100">Loading Course Title...</h1>
+                <p id="courseDesc" class="text-gray-400 text-sm mt-1">Fetching course details and lectures list...</p>
+            </div>
+            <button onclick="loadCourseContent()" class="bg-gray-700 hover:bg-gray-600 text-sm px-4 py-2 rounded-xl border border-gray-600 flex items-center gap-2 transition">
+                <i class="fa-solid fa-rotate-right"></i> Refresh Content
+            </button>
+        </div>
+
+        <!-- Main Content Area: Video/PDF Player Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+            <!-- Left 2 Columns: Content Playlist -->
+            <div class="lg:col-span-2">
+                <h2 class="text-lg font-bold text-gray-200 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-layer-group text-blue-500"></i> Lectures & Study Materials
+                </h2>
+                
+                <div id="contentList" class="space-y-3">
+                    <!-- Dynamic Items JS dwara load honge -->
+                    <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 text-center text-gray-400">
+                        <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-blue-500"></i>
+                        <p>Loading lectures from Google Sheet database...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Add Content Form (Admin View) -->
+            <div>
+                <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 sticky top-24 shadow-xl">
+                    <h2 class="text-md font-bold text-gray-200 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-circle-plus text-green-500"></i> Add Lecture / Material
+                    </h2>
+
+                    <form id="addContentForm" onsubmit="submitContent(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-400 mb-1">COURSE ID</label>
+                            <input type="text" id="inputCourseId" readonly class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-400 cursor-not-allowed">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-400 mb-1">TITLE / TOPIC</label>
+                            <input type="text" id="contentTitle" placeholder="e.g. Chapter 1 - Cell Biology" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-400 mb-1">CONTENT TYPE</label>
+                            <select id="contentType" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                                <option value="Video">Video Lecture (YouTube/Drive)</option>
+                                <option value="PDF">PDF Notes / Book</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-400 mb-1">RESOURCE URL</label>
+                            <input type="url" id="contentUrl" placeholder="https://..." required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="isFreePreview" class="rounded bg-gray-900 border-gray-700 text-blue-600 focus:ring-0">
+                            <label for="isFreePreview" class="text-xs text-gray-300">Allow Free Demo Preview</label>
+                        </div>
+                        <button type="submit" id="submitBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-lg transition text-sm flex justify-center items-center gap-2">
+                            <i class="fa-solid fa-upload"></i> Upload to Course
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- JavaScript Execution Engine -->
+    <script>
+        // Configured Web App API Endpoint
+        const API_URL = "https://script.google.com/macros/s/AKfycbzmJCm8lFBGQbMGMyQuJ1hcOoLfjkP5Kc_wuKBGCuy3DRzYg7jdtyLX9H5iZflfgvb_Pg/exec";
+        
+        // URL parameters se Course ID extract karein (e.g. course.html?courseId=CRS-101)
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentCourseId = urlParams.get('courseId') || 'CRS-101';
+
+        window.addEventListener("DOMContentLoaded", () => {
+            document.getElementById("inputCourseId").value = currentCourseId;
+            document.getElementById("activeCourseBadge").innerText = `ID: ${currentCourseId}`;
+            loadCourseContent();
+        });
+
+        // 1. Fetch Lectures & Material from Google Sheets Database
+        async function loadCourseContent() {
+            const listContainer = document.getElementById("contentList");
+            
+            try {
+                const response = await fetch(`${API_URL}?action=getContent&courseId=${currentCourseId}`);
+                const data = await response.json();
+
+                if (!Array.isArray(data) || data.length === 0) {
+                    listContainer.innerHTML = `
+                        <div class="bg-gray-800 p-8 rounded-xl border border-gray-700 text-center">
+                            <i class="fa-solid fa-folder-open text-4xl text-gray-600 mb-3"></i>
+                            <p class="text-gray-300 font-medium">Is course me abhi koi content add nahi hai.</p>
+                            <p class="text-gray-500 text-xs mt-1">Side panel se naye lectures upload karein.</p>
+                        </div>`;
+                    return;
+                }
+
+                document.getElementById("courseTitle").innerText = `Course Lectures (${data.length})`;
+                document.getElementById("courseDesc").innerText = `Complete learning syllabus for ID: ${currentCourseId}`;
+
+                listContainer.innerHTML = data.map((item, index) => {
+                    const isVideo = item.Type === "Video";
+                    return `
+                        <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 hover:border-gray-600 transition flex items-center justify-between gap-4">
+                            <div class="flex items-center gap-3">
+                                <div class="${isVideo ? 'bg-red-900/50 text-red-400' : 'bg-blue-900/50 text-blue-400'} p-3 rounded-lg text-lg flex items-center justify-center w-10 h-10">
+                                    <i class="fa-solid ${isVideo ? 'fa-play' : 'fa-file-pdf'}"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-sm text-gray-100">${index + 1}. ${item.Title}</h4>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <span class="text-xs text-gray-400">${item.Type}</span>
+                                        ${item.IsFreePreview ? '<span class="bg-green-900 text-green-300 text-[10px] px-1.5 py-0.5 rounded border border-green-700">Free Preview</span>' : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            <button onclick="openResource('${item.Type}', '${item.URL}', '${item.Title}')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3.5 py-2 rounded-lg font-medium transition flex items-center gap-1.5">
+                                <i class="fa-solid ${isVideo ? 'fa-circle-play' : 'fa-eye'}"></i> View
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Fetch Error',
+                    text: 'Google Sheets se content load karne me problem hui.',
+                    background: '#1f2937',
+                    color: '#fff'
+                });
+            }
+        }
+
+        // 2. SweetAlert Viewer Popup (Video & PDF Player Modal)
+        function openResource(type, url, title) {
+            if (!url) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Link Invalid',
+                    text: 'Is item ki URL URL database me mojood nahi hai.',
+                    background: '#1f2937',
+                    color: '#fff'
+                });
+                return;
+            }
+
+            let embedHtml = "";
+            
+            if (type === "Video") {
+                // Youtube ID conversion check
+                let embedUrl = url;
+                if (url.includes("watch?v=")) {
+                    embedUrl = url.replace("watch?v=", "embed/");
+                } else if (url.includes("youtu.be/")) {
+                    embedUrl = url.replace("youtu.be/", "www.youtube.com/embed/");
+                }
+
+                embedHtml = `
+                    <div class="aspect-video w-full rounded-lg overflow-hidden mt-3">
+                        <iframe class="w-full h-full" src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                    </div>`;
+            } else {
+                embedHtml = `
+                    <div class="h-96 w-full rounded-lg overflow-hidden mt-3">
+                        <iframe class="w-full h-full" src="${url}" frameborder="0"></iframe>
+                    </div>`;
+            }
+
+            Swal.fire({
+                title: `<span class="text-lg font-bold text-white">${title}</span>`,
+                html: embedHtml,
+                showCloseButton: true,
+                showConfirmButton: false,
+                width: '800px',
+                background: '#1f2937',
+                color: '#fff'
+            });
+        }
+
+        // 3. Submit New Material to Google Sheets (POST API)
+        async function submitContent(e) {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById("submitBtn");
+            submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving...`;
+            submitBtn.disabled = true;
+
+            const payload = {
+                action: "addContent",
+                payload: {
+                    courseId: document.getElementById("inputCourseId").value,
+                    title: document.getElementById("contentTitle").value,
+                    type: document.getElementById("contentType").value,
+                    url: document.getElementById("contentUrl").value,
+                    isFreePreview: document.getElementById("isFreePreview").checked
+                }
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    body: JSON.stringify(payload)
+                });
+                
+                const res = await response.json();
+
+                if (res.status === "success") {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Uploaded Successfully!',
+                        text: `Content ID: ${res.contentId} database me save ho gaya.`,
+                        background: '#1f2937',
+                        color: '#fff',
+                        confirmButtonColor: '#2563eb'
+                    });
+
+                    document.getElementById("addContentForm").reset();
+                    document.getElementById("inputCourseId").value = currentCourseId;
+                    loadCourseContent(); // Refresh playlist UI
+                } else {
+                    throw new Error(res.message || "Unknown Error");
+                }
+
+            } catch (err) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Upload Failed',
+                    text: err.message,
+                    background: '#1f2937',
+                    color: '#fff'
+                });
+            } finally {
+                submitBtn.innerHTML = `<i class="fa-solid fa-upload"></i> Upload to Course`;
+                submitBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
