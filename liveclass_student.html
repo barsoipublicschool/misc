@@ -170,7 +170,7 @@
                             <h3 class="font-bold text-lg mt-2 text-gray-100">${course.Title}</h3>
                             <p class="text-xs text-gray-400 mt-1 line-clamp-2">${course.Description || ''}</p>
                             
-                            <button onclick="viewLectures('${course.CourseID}', '${course.Title}')" class="w-full mt-5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-2">
+                            <button onclick="viewLectures('${course.CourseID}')" class="w-full mt-5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-2">
                                 <i class="fa-solid fa-circle-play"></i> Watch Lectures & Notes
                             </button>
                         </div>
@@ -182,94 +182,12 @@
             }
         }
 
-        // 4. View Lectures (Pure Student View - No Admin Forms)
-        async function viewLectures(courseId, courseTitle) {
-    window.location.href = `liveclass_learn.html?courseId=${courseId}`;
-}
-            Swal.fire({
-                title: 'Loading Lectures...',
-                allowOutsideClick: false,
-                didOpen: () => { Swal.showLoading(); },
-                background: '#1f2937',
-                color: '#fff'
-            });
-
-            try {
-                const response = await fetch(`${API_URL}?action=getContent&courseId=${courseId}`);
-                const lectures = await response.json();
-
-                if (!lectures || lectures.length === 0) {
-                    Swal.fire({
-                        icon: 'info',
-                        title: courseTitle,
-                        text: 'Is course me abhi tak koi lectures upload nahi hue hain.',
-                        background: '#1f2937',
-                        color: '#fff'
-                    });
-                    return;
-                }
-
-                let htmlContent = `<div class="space-y-3 text-left max-h-96 overflow-y-auto pr-1">`;
-                lectures.forEach((item, i) => {
-                    const isVideo = item.Type === "Video";
-                    htmlContent += `
-                        <div class="bg-gray-900 p-3 rounded-xl border border-gray-700 flex items-center justify-between gap-3">
-                            <div class="flex items-center gap-3">
-                                <div class="${isVideo ? 'bg-red-900/50 text-red-400' : 'bg-blue-900/50 text-blue-400'} p-2 rounded-lg text-sm w-8 h-8 flex items-center justify-center">
-                                    <i class="fa-solid ${isVideo ? 'fa-play' : 'fa-file-pdf'}"></i>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-xs text-gray-100">${i + 1}. ${item.Title}</h4>
-                                    <span class="text-[10px] text-gray-400">${item.Type}</span>
-                                </div>
-                            </div>
-                            <button onclick="playMedia('${item.Type}', '${item.URL}', '${item.Title}')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded-lg">
-                                Open
-                            </button>
-                        </div>
-                    `;
-                });
-                htmlContent += `</div>`;
-
-                Swal.fire({
-                    title: `<span class="text-md font-bold text-white">${courseTitle}</span>`,
-                    html: htmlContent,
-                    width: '600px',
-                    showConfirmButton: false,
-                    showCloseButton: true,
-                    background: '#1f2937',
-                    color: '#fff'
-                });
-
-            } catch (err) {
-                Swal.fire({ icon: 'error', title: 'Error', text: 'Lectures fetch nahi ho sake.', background: '#1f2937', color: '#fff' });
-            }
+        // 4. Redirect to Classroom Page
+        function viewLectures(courseId) {
+            window.location.href = `liveclass_learn.html?courseId=${courseId}`;
         }
 
-        // 5. Play Video / Open PDF
-        function playMedia(type, url, title) {
-            let embedUrl = url;
-            if (type === "Video") {
-                if (url.includes("watch?v=")) embedUrl = url.replace("watch?v=", "embed/");
-                else if (url.includes("youtu.be/")) embedUrl = url.replace("youtu.be/", "www.youtube.com/embed/");
-            }
-
-            const mediaHtml = type === "Video" 
-                ? `<div class="aspect-video w-full rounded-lg overflow-hidden mt-2"><iframe class="w-full h-full" src="${embedUrl}" frameborder="0" allowfullscreen></iframe></div>`
-                : `<div class="h-96 w-full rounded-lg overflow-hidden mt-2"><iframe class="w-full h-full" src="${url}" frameborder="0"></iframe></div>`;
-
-            Swal.fire({
-                title: `<span class="text-sm font-bold text-white">${title}</span>`,
-                html: mediaHtml,
-                width: '750px',
-                showConfirmButton: false,
-                showCloseButton: true,
-                background: '#1f2937',
-                color: '#fff'
-            });
-        }
-
-        // 6. Logout Function
+        // 5. Logout Function
         function logout() {
             localStorage.removeItem("cw_student");
             location.reload();
