@@ -64,59 +64,60 @@
             loadLectures();
         });
 
-        // 1. Fetch Lectures List
-        async function loadLectures() {
-            const container = document.getElementById("lectureList");
+        // Fetch Lectures List
+async function loadLectures() {
+    const container = document.getElementById("lectureList");
 
-            try {
-                const response = await fetch(`${API_URL}?action=getContent&courseId=${currentCourseId}`);
-                const data = await response.json();
+    try {
+        const response = await fetch(`${API_URL}?action=getContent&courseId=${currentCourseId}`);
+        const data = await response.json();
 
-                if (!Array.isArray(data) || data.length === 0) {
-                    container.innerHTML = `
-                        <div class="bg-gray-800 p-8 rounded-2xl border border-gray-700 text-center">
-                            <i class="fa-solid fa-folder-open text-4xl text-gray-600 mb-3"></i>
-                            <p class="text-gray-300 font-semibold text-sm">Is course me abhi tak koi lectures upload nahi hue hain.</p>
-                            <p class="text-gray-500 text-xs mt-1">Kripya apne teacher/admin se sampark karein.</p>
-                        </div>`;
-                    return;
-                }
-
-                document.getElementById("courseTitle").innerText = `Course Lectures (${data.length})`;
-
-                container.innerHTML = data.map((item, index) => {
-                    const isVideo = item.Type === "Video";
-                    return `
-                        <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 hover:border-gray-600 transition flex items-center justify-between gap-4 shadow-md">
-                            <div class="flex items-center gap-3">
-                                <div class="${isVideo ? 'bg-red-900/40 text-red-400 border border-red-800' : 'bg-blue-900/40 text-blue-400 border border-blue-800'} p-3 rounded-xl text-lg flex items-center justify-center w-11 h-11">
-                                    <i class="fa-solid ${isVideo ? 'fa-play' : 'fa-file-pdf'}"></i>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-sm text-gray-100">${index + 1}. ${item.Title}</h4>
-                                    <div class="flex items-center gap-2 mt-1">
-                                        <span class="text-[11px] text-gray-400 font-medium">${item.Type}</span>
-                                        ${item.IsFreePreview ? '<span class="bg-green-900/60 text-green-300 text-[10px] px-2 py-0.5 rounded border border-green-700">Free Demo</span>' : ''}
-                                    </div>
-                                </div>
-                            </div>
-                            <button onclick="playMedia('${item.Type}', '${item.URL}', '${item.Title}')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2 rounded-xl font-medium transition flex items-center gap-1.5 shadow-md">
-                                <i class="fa-solid ${isVideo ? 'fa-circle-play' : 'fa-book-open'}"></i> ${isVideo ? 'Watch Video' : 'Read PDF'}
-                            </button>
-                        </div>
-                    `;
-                }).join('');
-
-            } catch (err) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Loading Failed',
-                    text: 'Lectures load karne me samasya aayi.',
-                    background: '#1f2937',
-                    color: '#fff'
-                });
-            }
+        if (!Array.isArray(data) || data.length === 0) {
+            container.innerHTML = `
+                <div class="bg-gray-800 p-8 rounded-2xl border border-gray-700 text-center">
+                    <i class="fa-solid fa-folder-open text-4xl text-gray-600 mb-3"></i>
+                    <p class="text-gray-300 font-semibold text-sm">Is course me abhi tak koi lectures upload nahi hue hain.</p>
+                </div>`;
+            return;
         }
+
+        document.getElementById("courseTitle").innerText = `Course Lectures (${data.length})`;
+
+        container.innerHTML = data.map((item, index) => {
+            // Type missing hone par default 'Video' set karein
+            const type = item.Type || "Video"; 
+            const isVideo = type.toLowerCase() === "video";
+
+            return `
+                <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 hover:border-gray-600 transition flex items-center justify-between gap-4 shadow-md">
+                    <div class="flex items-center gap-3">
+                        <div class="${isVideo ? 'bg-red-900/40 text-red-400 border border-red-800' : 'bg-blue-900/40 text-blue-400 border border-blue-800'} p-3 rounded-xl text-lg flex items-center justify-center w-11 h-11">
+                            <i class="fa-solid ${isVideo ? 'fa-play' : 'fa-file-pdf'}"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-sm text-gray-100">${index + 1}. ${item.Title || 'Untitled Lecture'}</h4>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="text-[11px] text-gray-400 font-medium">${type}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="playMedia('${type}', '${item.URL}', '${item.Title}')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2 rounded-xl font-medium transition flex items-center gap-1.5 shadow-md">
+                        <i class="fa-solid ${isVideo ? 'fa-circle-play' : 'fa-book-open'}"></i> ${isVideo ? 'Watch Video' : 'Read PDF'}
+                    </button>
+                </div>
+            `;
+        }).join('');
+
+    } catch (err) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Loading Failed',
+            text: 'Lectures load karne me samasya aayi.',
+            background: '#1f2937',
+            color: '#fff'
+        });
+    }
+}
 
         // 2. Play Video / Open PDF in SweetAlert Popup Modal
         function playMedia(type, url, title) {
