@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Classroom - Barsoi Public School</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="bg-gray-900 text-white font-sans min-h-screen pb-12">
+
+    <nav class="bg-gray-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center sticky top-0 z-40 shadow-lg">
+        <div class="flex items-center gap-3">
+            <a href="student.html" class="bg-gray-700 hover:bg-gray-600 text-gray-300 px-3 py-1.5 rounded-xl text-xs transition flex items-center gap-1.5">
+                <i class="fa-solid fa-arrow-left"></i> My Courses
+            </a>
+            <span class="text-md font-bold tracking-wide border-l border-gray-700 pl-3">Classroom Player</span>
+        </div>
+        <div>
+            <span id="courseBadge" class="bg-blue-900/60 text-blue-300 text-xs px-3 py-1 rounded-full border border-blue-700 font-semibold">
+                Course ID: --
+            </span>
+        </div>
+    </nav>
+
+    <div class="max-w-6xl mx-auto px-4 mt-6">
+
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-6 mb-8 shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+                <span class="text-xs bg-green-900/50 text-green-300 border border-green-700 px-2.5 py-0.5 rounded font-semibold">Active Enrollment</span>
+                <h1 id="courseTitle" class="text-2xl font-bold text-gray-100 mt-2">Loading Course Classroom...</h1>
+                <p id="courseSubtitle" class="text-gray-400 text-xs mt-1">Sabhhi video lectures aur study notes neeche listed hain.</p>
+            </div>
+            <button onclick="loadLectures()" class="bg-gray-700 hover:bg-gray-600 text-xs px-3.5 py-2 rounded-xl border border-gray-600 flex items-center gap-2 transition">
+                <i class="fa-solid fa-rotate-right"></i> Refresh Lectures
+            </button>
+        </div>
+
+        <div class="space-y-4">
+            <h2 class="text-md font-bold text-gray-200 flex items-center gap-2 mb-4">
+                <i class="fa-solid fa-play-circle text-blue-500"></i> Course Content & Syllabus
+            </h2>
+
+            <div id="lectureList" class="space-y-3">
+                <div class="bg-gray-800 p-8 rounded-xl border border-gray-700 text-center text-gray-400">
+                    <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2 text-blue-500"></i>
+                    <p class="text-sm">Fetching lectures from server...</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbzmJCm8lFBGQbMGMyQuJ1hcOoLfjkP5Kc_wuKBGCuy3DRzYg7jdtyLX9H5iZflfgvb_Pg/exec";
+        
+        // URL se Course ID fetch karein (e.g. learn.html?courseId=CRS-101)
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentCourseId = urlParams.get('courseId') || 'CRS-101';
+
+        window.addEventListener("DOMContentLoaded", () => {
+            document.getElementById("courseBadge").innerText = `Course: ${currentCourseId}`;
+            loadLectures();
+        });
+
+        // 1. Fetch Lectures List
+        async function loadLectures() {
+            const container = document.getElementById("lectureList");
+
+            try {
+                const response = await fetch(`${API_URL}?action=getContent&courseId=${currentCourseId}`);
+                const data = await response.json();
+
+                if (!Array.isArray(data) || data.length === 0) {
+                    container.innerHTML = `
+                        <div class="bg-gray-800 p-8 rounded-2xl border border-gray-700 text-center">
+                            <i class="fa-solid fa-folder-open text-4xl text-gray-600 mb-3"></i>
+                            <p class="text-gray-300 font-semibold text-sm">Is course me abhi tak koi lectures upload nahi hue hain.</p>
+                            <p class="text-gray-500 text-xs mt-1">Kripya apne teacher/admin se sampark karein.</p>
+                        </div>`;
+                    return;
+                }
+
+                document.getElementById("courseTitle").innerText = `Course Lectures (${data.length})`;
+
+                container.innerHTML = data.map((item, index) => {
+                    const isVideo = item.Type === "Video";
+                    return `
+                        <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 hover:border-gray-600 transition flex items-center justify-between gap-4 shadow-md">
+                            <div class="flex items-center gap-3">
+                                <div class="${isVideo ? 'bg-red-900/40 text-red-400 border border-red-800' : 'bg-blue-900/40 text-blue-400 border border-blue-800'} p-3 rounded-xl text-lg flex items-center justify-center w-11 h-11">
+                                    <i class="fa-solid ${isVideo ? 'fa-play' : 'fa-file-pdf'}"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-sm text-gray-100">${index + 1}. ${item.Title}</h4>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <span class="text-[11px] text-gray-400 font-medium">${item.Type}</span>
+                                        ${item.IsFreePreview ? '<span class="bg-green-900/60 text-green-300 text-[10px] px-2 py-0.5 rounded border border-green-700">Free Demo</span>' : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            <button onclick="playMedia('${item.Type}', '${item.URL}', '${item.Title}')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2 rounded-xl font-medium transition flex items-center gap-1.5 shadow-md">
+                                <i class="fa-solid ${isVideo ? 'fa-circle-play' : 'fa-book-open'}"></i> ${isVideo ? 'Watch Video' : 'Read PDF'}
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Loading Failed',
+                    text: 'Lectures load karne me samasya aayi.',
+                    background: '#1f2937',
+                    color: '#fff'
+                });
+            }
+        }
+
+        // 2. Play Video / Open PDF in SweetAlert Popup Modal
+        function playMedia(type, url, title) {
+            if (!url) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Resource Unavailable',
+                    text: 'Is lecture ka link available nahi hai.',
+                    background: '#1f2937',
+                    color: '#fff'
+                });
+                return;
+            }
+
+            let embedHtml = "";
+            
+            if (type === "Video") {
+                let embedUrl = url;
+                if (url.includes("watch?v=")) embedUrl = url.replace("watch?v=", "embed/");
+                else if (url.includes("youtu.be/")) embedUrl = url.replace("youtu.be/", "www.youtube.com/embed/");
+
+                embedHtml = `
+                    <div class="aspect-video w-full rounded-xl overflow-hidden mt-3 border border-gray-700 shadow-2xl">
+                        <iframe class="w-full h-full" src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                    </div>`;
+            } else {
+                embedHtml = `
+                    <div class="h-96 w-full rounded-xl overflow-hidden mt-3 border border-gray-700 shadow-2xl">
+                        <iframe class="w-full h-full" src="${url}" frameborder="0"></iframe>
+                    </div>`;
+            }
+
+            Swal.fire({
+                title: `<span class="text-md font-bold text-white">${title}</span>`,
+                html: embedHtml,
+                showCloseButton: true,
+                showConfirmButton: false,
+                width: '800px',
+                background: '#1f2937',
+                color: '#fff'
+            });
+        }
+    </script>
+</body>
+</html>
