@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Portal - Barsoi Public School</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="bg-gray-900 text-white font-sans min-h-screen">
+
+    <!-- 1. STUDENT LOGIN SECTION -->
+    <div id="loginSection" class="min-h-screen flex items-center justify-center px-4">
+        <div class="bg-gray-800 border border-gray-700 p-8 rounded-2xl w-full max-w-md shadow-2xl">
+            <div class="text-center mb-6">
+                <div class="bg-blue-600 text-white w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-3 shadow-lg">
+                    <i class="fa-solid fa-user-graduate"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-100">Student Portal</h2>
+                <p class="text-gray-400 text-xs mt-1">Apne Mobile / Email aur Password se Login karein</p>
+            </div>
+
+            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 mb-1">MOBILE OR EMAIL</label>
+                    <input type="text" id="loginUser" required placeholder="Registered Mobile/Email" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 mb-1">PASSWORD / PIN</label>
+                    <input type="password" id="loginPass" required placeholder="••••••••" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 transition">
+                </div>
+                <button type="submit" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition duration-200 text-sm shadow-lg flex justify-center items-center gap-2">
+                    <i class="fa-solid fa-right-to-bracket"></i> Login to Portal
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. STUDENT DASHBOARD SECTION (Login Ke Baad Dikhga) -->
+    <div id="portalSection" class="hidden">
+        <!-- Top Navigation Header -->
+        <nav class="bg-gray-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center sticky top-0 z-40">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 text-white p-2 rounded-lg text-lg">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <span class="font-bold text-lg tracking-wide">ClassWalla Student</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <span id="studentWelcome" class="text-sm font-medium text-gray-300">Welcome, Student</span>
+                <button onclick="logout()" class="bg-red-900/50 hover:bg-red-800 text-red-300 border border-red-700 text-xs px-3 py-1.5 rounded-lg transition">
+                    <i class="fa-solid fa-power-off mr-1"></i> Logout
+                </button>
+            </div>
+        </nav>
+
+        <div class="max-w-6xl mx-auto px-4 py-8">
+            <h2 class="text-xl font-bold text-gray-100 mb-6 flex items-center gap-2">
+                <i class="fa-solid fa-book-bookmark text-blue-500"></i> My Enrolled Courses
+            </h2>
+
+            <div id="studentCourseList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Courses JS dwara auto-render honge -->
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Execution Engine -->
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbzmJCm8lFBGQbMGMyQuJ1hcOoLfjkP5Kc_wuKBGCuy3DRzYg7jdtyLX9H5iZflfgvb_Pg/exec";
+        let loggedInStudent = null;
+
+        // Auto Login Check
+        window.addEventListener("DOMContentLoaded", () => {
+            const savedStudent = localStorage.getItem("cw_student");
+            if (savedStudent) {
+                loggedInStudent = JSON.parse(savedStudent);
+                showPortal();
+            }
+        });
+
+        // 1. Student Authentication Login Logic
+        async function handleLogin(e) {
+            e.preventDefault();
+            const btn = document.getElementById("loginBtn");
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Checking...`;
+            btn.disabled = true;
+
+            const userVal = document.getElementById("loginUser").value.trim();
+            const passVal = document.getElementById("loginPass").value.trim();
+
+            try {
+                const response = await fetch(`${API_URL}?action=getStudents`);
+                const students = await response.json();
+
+                // Check Matching Credentials
+                const match = students.find(s => 
+                    (s.Email == userVal || s.Mobile == userVal) && s.Password == passVal
+                );
+
+                if (match) {
+                    loggedInStudent = match;
+                    localStorage.setItem("cw_student", JSON.stringify(match));
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Login Successful!',
+                        text: `Welcome back, ${match.Name}`,
+                        background: '#1f2937',
+                        color: '#fff',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+
+                    showPortal();
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Login Failed',
+                        text: 'Invalid Mobile/Email ya Password!',
+                        background: '#1f2937',
+                        color: '#fff'
+                    });
+                }
+            } catch (err) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Server Error',
+                    text: 'Google Sheet Database connect nahi ho saka.',
+                    background: '#1f2937',
+                    color: '#fff'
+                });
+            } finally {
+                btn.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> Login to Portal`;
+                btn.disabled = false;
+            }
+        }
+
+        // 2. Show Student Dashboard
+        function showPortal() {
+            document.getElementById("loginSection").classList.add("hidden");
+            document.getElementById("portalSection").classList.remove("hidden");
+            document.getElementById("studentWelcome").innerText = `Hi, ${loggedInStudent.Name}`;
+            loadStudentCourses();
+        }
+
+        // 3. Load Courses
+        async function loadStudentCourses() {
+            const container = document.getElementById("studentCourseList");
+            container.innerHTML = `<p class="col-span-3 text-center text-gray-400 py-10"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-blue-500"></i><br>Loading your courses...</p>`;
+
+            try {
+                const response = await fetch(`${API_URL}?action=getCourses`);
+                const allCourses = await response.json();
+
+                if (allCourses.length === 0) {
+                    container.innerHTML = `<p class="col-span-3 text-center text-gray-400 py-10">Abhi koi course uplabdh nahi hai.</p>`;
+                    return;
+                }
+
+                container.innerHTML = allCourses.map(course => `
+                    <div class="bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden shadow-lg hover:border-gray-600 transition">
+                        <img src="${course.ThumbnailURL || 'https://picsum.photos/300/150'}" class="w-full h-40 object-cover">
+                        <div class="p-5">
+                            <span class="text-xs bg-blue-900 text-blue-300 px-2.5 py-1 rounded-md font-semibold">${course.Category || 'General'}</span>
+                            <h3 class="font-bold text-lg mt-2 text-gray-100">${course.Title}</h3>
+                            <p class="text-xs text-gray-400 mt-1 line-clamp-2">${course.Description || ''}</p>
+                            
+                            <button onclick="viewLectures('${course.CourseID}', '${course.Title}')" class="w-full mt-5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-circle-play"></i> Watch Lectures & Notes
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (err) {
+                container.innerHTML = `<p class="col-span-3 text-center text-red-400 py-10">Courses load karne me dikkat hui.</p>`;
+            }
+        }
+
+        // 4. View Lectures (Pure Student View - No Admin Forms)
+        async function viewLectures(courseId, courseTitle) {
+            Swal.fire({
+                title: 'Loading Lectures...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); },
+                background: '#1f2937',
+                color: '#fff'
+            });
+
+            try {
+                const response = await fetch(`${API_URL}?action=getContent&courseId=${courseId}`);
+                const lectures = await response.json();
+
+                if (!lectures || lectures.length === 0) {
+                    Swal.fire({
+                        icon: 'info',
+                        title: courseTitle,
+                        text: 'Is course me abhi tak koi lectures upload nahi hue hain.',
+                        background: '#1f2937',
+                        color: '#fff'
+                    });
+                    return;
+                }
+
+                let htmlContent = `<div class="space-y-3 text-left max-h-96 overflow-y-auto pr-1">`;
+                lectures.forEach((item, i) => {
+                    const isVideo = item.Type === "Video";
+                    htmlContent += `
+                        <div class="bg-gray-900 p-3 rounded-xl border border-gray-700 flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                                <div class="${isVideo ? 'bg-red-900/50 text-red-400' : 'bg-blue-900/50 text-blue-400'} p-2 rounded-lg text-sm w-8 h-8 flex items-center justify-center">
+                                    <i class="fa-solid ${isVideo ? 'fa-play' : 'fa-file-pdf'}"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-xs text-gray-100">${i + 1}. ${item.Title}</h4>
+                                    <span class="text-[10px] text-gray-400">${item.Type}</span>
+                                </div>
+                            </div>
+                            <button onclick="playMedia('${item.Type}', '${item.URL}', '${item.Title}')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded-lg">
+                                Open
+                            </button>
+                        </div>
+                    `;
+                });
+                htmlContent += `</div>`;
+
+                Swal.fire({
+                    title: `<span class="text-md font-bold text-white">${courseTitle}</span>`,
+                    html: htmlContent,
+                    width: '600px',
+                    showConfirmButton: false,
+                    showCloseButton: true,
+                    background: '#1f2937',
+                    color: '#fff'
+                });
+
+            } catch (err) {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Lectures fetch nahi ho sake.', background: '#1f2937', color: '#fff' });
+            }
+        }
+
+        // 5. Play Video / Open PDF
+        function playMedia(type, url, title) {
+            let embedUrl = url;
+            if (type === "Video") {
+                if (url.includes("watch?v=")) embedUrl = url.replace("watch?v=", "embed/");
+                else if (url.includes("youtu.be/")) embedUrl = url.replace("youtu.be/", "www.youtube.com/embed/");
+            }
+
+            const mediaHtml = type === "Video" 
+                ? `<div class="aspect-video w-full rounded-lg overflow-hidden mt-2"><iframe class="w-full h-full" src="${embedUrl}" frameborder="0" allowfullscreen></iframe></div>`
+                : `<div class="h-96 w-full rounded-lg overflow-hidden mt-2"><iframe class="w-full h-full" src="${url}" frameborder="0"></iframe></div>`;
+
+            Swal.fire({
+                title: `<span class="text-sm font-bold text-white">${title}</span>`,
+                html: mediaHtml,
+                width: '750px',
+                showConfirmButton: false,
+                showCloseButton: true,
+                background: '#1f2937',
+                color: '#fff'
+            });
+        }
+
+        // 6. Logout Function
+        function logout() {
+            localStorage.removeItem("cw_student");
+            location.reload();
+        }
+    </script>
+</body>
+</html>
