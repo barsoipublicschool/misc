@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassWalla - Student Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto space-y-6">
+        
+        <!-- Header -->
+        <div class="flex justify-between items-center bg-slate-800 p-4 rounded-xl border border-slate-700">
+            <h1 class="text-xl font-bold text-indigo-400">🎓 ClassWalla Admin Dashboard</h1>
+            <button onclick="fetchStudents()" class="bg-indigo-600 hover:bg-indigo-700 text-sm px-4 py-2 rounded-lg font-medium transition">
+                🔄 Refresh List
+            </button>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-6">
+            
+            <!-- Registration Form -->
+            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 space-y-4">
+                <h2 class="text-lg font-semibold text-emerald-400">Add New Student</h2>
+                <form id="studentForm" onsubmit="addStudent(event)" class="space-y-3">
+                    <div>
+                        <label class="text-xs text-slate-400">Full Name</label>
+                        <input type="text" id="name" required class="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-lg text-sm focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400">Mobile Number</label>
+                        <input type="tel" id="mobile" required class="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-lg text-sm focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400">Course / Class</label>
+                        <input type="text" id="course" placeholder="e.g. Zoology Masterclass" required class="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-lg text-sm focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400">Batch</label>
+                        <input type="text" id="batch" placeholder="e.g. 2026-Batch-A" required class="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-lg text-sm focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400">Fees Status</label>
+                        <select id="fees" class="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-lg text-sm focus:outline-none focus:border-indigo-500">
+                            <option value="Yes">Paid</option>
+                            <option value="No">Pending</option>
+                        </select>
+                    </div>
+                    <button type="submit" id="submitBtn" class="w-full bg-emerald-600 hover:bg-emerald-700 font-medium py-2.5 rounded-lg text-sm transition">
+                        Register Student
+                    </button>
+                </form>
+            </div>
+
+            <!-- Student Directory -->
+            <div class="md:col-span-2 bg-slate-800 p-5 rounded-xl border border-slate-700 space-y-4">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-lg font-semibold text-indigo-400">Student Directory</h2>
+                    <input type="text" id="search" onkeyup="filterStudents()" placeholder="Search student..." class="bg-slate-900 border border-slate-700 px-3 py-1.5 text-sm rounded-lg">
+                </div>
+
+                <div class="overflow-x-auto max-h-[500px]">
+                    <table class="w-full text-left text-sm text-slate-300">
+                        <thead class="bg-slate-900/80 sticky top-0 text-slate-400 text-xs uppercase">
+                            <tr>
+                                <th class="p-3">ID</th>
+                                <th class="p-3">Name</th>
+                                <th class="p-3">Course</th>
+                                <th class="p-3">Mobile</th>
+                                <th class="p-3">Fees</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentTableBody" class="divide-y divide-slate-700/50">
+                            <tr>
+                                <td colspan="5" class="text-center p-6 text-slate-500">Loading student records...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // ⚠️ Replace this with your Web App URL from Apps Script Deployment
+        const API_URL = "https://script.google.com/macros/s/AKfycbzo_3fglONVClwbtPzjdnywO12ZYqGobhdFfyaTbsA9dWujbzeKAQkeQRtke96EG7J5xQ/exec";
+
+        let allStudents = [];
+
+        async function fetchStudents() {
+            try {
+                const res = await fetch(`${API_URL}?action=getStudents`);
+                const json = await res.json();
+                if(json.status === "success") {
+                    allStudents = json.data;
+                    renderTable(allStudents);
+                }
+            } catch(e) {
+                console.error("Fetch Error:", e);
+            }
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById("studentTableBody");
+            if(data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-slate-500">No students found</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = data.map(s => `
+                <tr class="hover:bg-slate-700/30 transition">
+                    <td class="p-3 font-mono text-indigo-400">${s.StudentID || '-'}</td>
+                    <td class="p-3 font-medium text-white">${s.FullName}</td>
+                    <td class="p-3">${s.Course}</td>
+                    <td class="p-3">${s.Mobile}</td>
+                    <td class="p-3">
+                        <span class="px-2 py-1 rounded text-xs ${s.FeesPaid === 'Yes' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">
+                            ${s.FeesPaid}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function addStudent(e) {
+            e.preventDefault();
+            const btn = document.getElementById("submitBtn");
+            btn.disabled = true;
+            btn.innerText = "Saving...";
+
+            const payload = {
+                action: "addStudent",
+                data: {
+                    FullName: document.getElementById("name").value,
+                    Mobile: document.getElementById("mobile").value,
+                    Course: document.getElementById("course").value,
+                    Batch: document.getElementById("batch").value,
+                    FeesPaid: document.getElementById("fees").value
+                }
+            };
+
+            try {
+                const res = await fetch(API_URL, {
+                    method: "POST",
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+                if(result.status === "success") {
+                    alert("Student Added! ID: " + result.studentId);
+                    document.getElementById("studentForm").reset();
+                    fetchStudents();
+                }
+            } catch(e) {
+                alert("Error saving student data");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Register Student";
+            }
+        }
+
+        function filterStudents() {
+            const query = document.getElementById("search").value.toLowerCase();
+            const filtered = allStudents.filter(s => 
+                String(s.FullName).toLowerCase().includes(query) || 
+                String(s.Mobile).includes(query) ||
+                String(s.StudentID).toLowerCase().includes(query)
+            );
+            renderTable(filtered);
+        }
+
+        // Initial Load
+        window.onload = fetchStudents;
+    </script>
+</body>
+</html>
