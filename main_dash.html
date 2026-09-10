@@ -478,20 +478,23 @@
 
         // Updated Share App Function with SweetAlert2 & Fallback Copy
         function shareApp() {
+    const shareMessage = "Dear Parents & Guardians,\n\n" +
+        "Welcome to Barsoi Public School.\n\n" +
+        "To stay connected and receive instant updates regarding school announcements, homework, student reports and events, please download our official Mobile App :\n" +
+        "https://bpsofficialmobileapp.netlify.app";
+
     if (window.AndroidShare) {
-        // Sketchware Java Interface call karega
-        window.AndroidShare.shareText("BARSOI PUBLIC SCHOOL App Link: " + window.location.href);
+        window.AndroidShare.shareText(shareMessage);
     } else if (navigator.share) {
         navigator.share({
             title: 'BARSOI PUBLIC SCHOOL',
-            text: 'Dear Parents & Guardians, Welcome to Barsoi Public School. To stay connected and receive instant updates regarding school announcements, homework, student reports and events, please download our official Mobile App : https://bpsofficialmobileapp.netlify.app',
-            url: window.location.href
+            text: shareMessage
         });
     } else {
         Swal.fire({
             icon: 'info',
             title: 'Share Link',
-            text: window.location.href
+            text: 'https://bpsofficialmobileapp.netlify.app'
         });
     }
 }
