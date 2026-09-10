@@ -478,40 +478,24 @@
 
         // Updated Share App Function with SweetAlert2 & Fallback Copy
         async function shareApp() {
-            const shareData = {
-                title: 'BARSOI PUBLIC SCHOOL',
-                text: 'Download / Check Barsoi Public School App:',
-                url: window.location.href
-            };
-
-            if (navigator.share) {
-                try {
-                    await navigator.share(shareData);
-                } catch (err) {
-                    // User canceled share operation or error occurred
-                    console.log('Share error/canceled:', err);
-                }
-            } else {
-                // Fallback using SweetAlert2
-                try {
-                    await navigator.clipboard.writeText(window.location.href);
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Link Copied!',
-                        text: 'App link copied to clipboard. You can now paste and share it on WhatsApp or Telegram.',
-                        confirmButtonColor: '#ff8c00',
-                        confirmButtonText: 'OK'
-                    });
-                } catch (err) {
-                    Swal.fire({
-                        icon: 'info',
-                        title: 'App Link',
-                        html: `<p>Copy this link to share:</p><code>${window.location.href}</code>`,
-                        confirmButtonColor: '#ff8c00'
-                    });
-                }
-            }
-        }
+        function shareApp() {
+    if (window.AndroidShare) {
+        // Sketchware Java Interface call karega
+        window.AndroidShare.shareText("BARSOI PUBLIC SCHOOL App Link: " + window.location.href);
+    } else if (navigator.share) {
+        navigator.share({
+            title: 'BARSOI PUBLIC SCHOOL',
+            text: 'Barsoi Public School Mobile App Link:',
+            url: window.location.href
+        });
+    } else {
+        Swal.fire({
+            icon: 'info',
+            title: 'Share Link',
+            text: window.location.href
+        });
+    }
+}
 
         // Auto ViewPager Slider Logic
         let currentIndex = 0;
