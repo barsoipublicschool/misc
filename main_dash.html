@@ -37,7 +37,6 @@
             display: flex;
             flex-direction: column;
             overflow-x: hidden;
-            padding-bottom: 0px;
         }
 
         /* Header Nav */
@@ -125,8 +124,8 @@
         .grid-container {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 25px 8px;
-            padding: 10px 12px 25px 12px;
+            gap: 20px 8px;
+            padding: 10px 12px 10px 12px;
         }
 
         .grid-card {
@@ -169,13 +168,12 @@
             color: #ffffff;
         }
 
-        /* Footer Styling */
+        /* Footer Styling - Blue Background & Better Formatting */
         .custom-footer {
-            background-color: #0b0e14;
+            background-color: #1a1b81; /* Same Blue Background */
             width: 100%;
-            padding: 16px 14px;
-            margin-top: auto;
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 10px 16px 20px 16px; /* Upar shift karne ke liye space adjust kiya */
+            margin-top: 5px;
         }
 
         .footer-content {
@@ -185,23 +183,26 @@
         }
 
         .footer-title {
-            font-size: 13px;
-            color: #d1d5db;
-            font-weight: 500;
+            font-size: 13.5px;
+            color: #ffffff;
+            font-weight: 600;
             margin-bottom: 6px;
-            line-height: 1.3;
+            line-height: 1.4;
+            letter-spacing: 0.2px;
         }
 
         .highlight-name {
-            color: #f59e0b;
+            color: #ffcc00; /* Bright Yellow Highlight */
             font-weight: 700;
         }
 
         .footer-subtitle {
-            font-size: 10.5px;
-            color: #6b7280;
-            line-height: 1.45;
+            font-size: 11px;
+            color: #e0e0e0;
+            line-height: 1.5;
+            font-weight: 400;
             word-break: break-word;
+            padding: 0 4px;
         }
 
         /* Side Drawer Overlay & Panel */
