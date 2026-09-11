@@ -2,7 +2,7 @@
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BARSOI PUBLIC SCHOOL</title>
     <!-- FontAwesome Icons for Drawer -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -17,10 +17,16 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        body {
+        html, body {
+            width: 100%;
+            height: 100%;
             background-color: #12136e;
+        }
+
+        body {
             color: white;
             min-height: 100vh;
+            min-height: -webkit-fill-available;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -32,6 +38,7 @@
             max-width: 480px;
             background-color: #1a1b81;
             min-height: 100vh;
+            min-height: -webkit-fill-available;
             position: relative;
             box-shadow: 0 0 25px rgba(0,0,0,0.6);
             display: flex;
@@ -126,6 +133,7 @@
             grid-template-columns: repeat(4, 1fr);
             gap: 20px 8px;
             padding: 10px 12px 10px 12px;
+            flex-grow: 1; /* Long screen wale phones me layout stretch balance karne ke liye */
         }
 
         .grid-card {
@@ -167,12 +175,13 @@
             line-height: 1.2;
             color: #ffffff;
         }
-          /* Footer Styling - Slightly Moved Down */
+
+        /* Footer Styling */
         .custom-footer {
             background-color: #1a1b81;
             width: 100%;
             padding: 10px 16px 25px 16px;
-            margin-top: 35px; /* Is value ko 20px se 50px karke aap further adjust kar sakte hain */
+            margin-top: auto; /* Bottom positioning har phone screen me fix rahegi */
         }
 
         .footer-content {
