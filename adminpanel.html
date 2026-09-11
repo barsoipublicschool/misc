@@ -194,6 +194,19 @@
 
     <!-- JavaScript Logic -->
     <script>
+        // Check Login Status Page Load hotey hi
+        window.onload = function() {
+            if (localStorage.getItem('isLoggedIn') === 'true') {
+                showDashboard();
+            }
+        };
+
+        function showDashboard() {
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.remove('hidden');
+            document.getElementById('logoutSection').classList.remove('hidden');
+        }
+
         function handleLogin(event) {
             event.preventDefault();
 
@@ -204,6 +217,9 @@
             const CORRECT_PASS = "BPS@2026";
 
             if (user === CORRECT_USER && pass === CORRECT_PASS) {
+                // Save session into Local Storage
+                localStorage.setItem('isLoggedIn', 'true');
+
                 Swal.fire({
                     title: 'Welcome Back!',
                     text: 'Admin login successful.',
@@ -214,9 +230,7 @@
                         popup: 'rounded-2xl'
                     }
                 }).then(() => {
-                    document.getElementById('loginSection').classList.add('hidden');
-                    document.getElementById('dashboardSection').classList.remove('hidden');
-                    document.getElementById('logoutSection').classList.remove('hidden');
+                    showDashboard();
                 });
             } else {
                 Swal.fire({
@@ -243,6 +257,9 @@
                 confirmButtonText: 'Yes, Logout'
             }).then((result) => {
                 if (result.isConfirmed) {
+                    // Clear Session from Local Storage
+                    localStorage.removeItem('isLoggedIn');
+                    
                     document.getElementById('loginSection').classList.remove('hidden');
                     document.getElementById('dashboardSection').classList.add('hidden');
                     document.getElementById('logoutSection').classList.add('hidden');
