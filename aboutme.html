@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About Me - Riyaz Ahmad</title>
+  
+  <!-- Google Fonts & Font Awesome Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    :root {
+      --primary: #1e3a8a;       /* Royal Blue */
+      --secondary: #0d9488;     /* Teal Accent */
+      --dark: #0f172a;          /* Slate Dark */
+      --light-bg: #f8fafc;      /* Soft Grey */
+      --card-bg: #ffffff;
+      --text-main: #334155;
+      --text-muted: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    body {
+      background-color: var(--light-bg);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding-bottom: 50px;
+    }
+
+    .container {
+      max-width: 1050px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* HERO PROFILE SECTION */
+    .profile-hero {
+      background: linear-gradient(135deg, var(--primary), #3b82f6);
+      color: white;
+      padding: 60px 20px 80px 20px;
+      border-radius: 0 0 30px 30px;
+      box-shadow: 0 10px 25px rgba(30, 58, 138, 0.25);
+      margin-bottom: -50px;
+      text-align: center;
+    }
+
+    .profile-card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      max-width: 950px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 10;
+    }
+
+    .hero-flex {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 25px;
+      text-align: center;
+    }
+
+    @media(min-width: 768px) {
+      .hero-flex {
+        flex-direction: row;
+        text-align: left;
+      }
+    }
+
+    .photo-container {
+      position: relative;
+      width: 170px;
+      height: 170px;
+      flex-shrink: 0;
+    }
+
+    .photo-frame {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 5px solid white;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      background: #e2e8f0;
+    }
+
+    .user-info h1 {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--dark);
+      letter-spacing: -0.5px;
+    }
+
+    .user-info .badge {
+      display: inline-block;
+      background: #e0f2fe;
+      color: var(--primary);
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+      margin: 8px 0 15px 0;
+    }
+
+    .user-info p {
+      color: var(--text-muted);
+      font-size: 15px;
+    }
+
+    .location-tag {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      margin-top: 5px;
+    }
+
+    .location-tag i {
+      color: var(--secondary);
+      margin-right: 5px;
+    }
+
+    /* GRID LAYOUT FOR DETAILS */
+    .grid-container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 30px;
+      margin-top: 40px;
+    }
+
+    @media(min-width: 850px) {
+      .grid-container {
+        grid-template-columns: 2fr 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 30px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+      margin-bottom: 30px;
+      border: 1px solid #edf2f7;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--dark);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 2px solid #f1f5f9;
+      padding-bottom: 10px;
+    }
+
+    .section-title i {
+      color: var(--secondary);
+    }
+
+    /* TIMELINE STYLES FOR EDUCATION */
+    .timeline {
+      position: relative;
+      padding-left: 20px;
+      border-left: 2px solid #e2e8f0;
+    }
+
+    .timeline-item {
+      position: relative;
+      margin-bottom: 25px;
+    }
+
+    .timeline-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -26px;
+      top: 5px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--secondary);
+      border: 2px solid white;
+    }
+
+    .timeline-item h4 {
+      font-size: 15px;
+      color: var(--dark);
+    }
+
+    .timeline-item p {
+      font-size: 13.5px;
+      color: var(--text-muted);
+    }
+
+    /* SKILL BADGES */
+    .skills-flex {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .skill-tag {
+      background: #f1f5f9;
+      color: var(--dark);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      transition: 0.3s;
+    }
+
+    .skill-tag:hover {
+      background: var(--secondary);
+      color: white;
+    }
+
+    /* LIST ITEMS WITH ICONS */
+    .custom-list {
+      list-style: none;
+    }
+
+    .custom-list li {
+      font-size: 14px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .custom-list li i {
+      color: var(--secondary);
+      margin-top: 4px;
+    }
+
+    /* STRENGTHS CHIPS */
+    .strength-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #f0fdf4;
+      color: #166534;
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      margin: 4px;
+      border: 1px solid #bbf7d0;
+    }
+
+    footer {
+      text-align: center;
+      padding: 30px 0 10px 0;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HERO TOP HEADER BANNER -->
+  <div class="profile-hero">
+    <h2>Welcome to My Official Profile</h2>
+  </div>
+
+  <div class="container">
+    <!-- MAIN PROFILE HEADER CARD -->
+    <div class="profile-card">
+      <div class="hero-flex">
+        
+        <!-- PHOTO CONTAINER -->
+        <div class="photo-container">
+          <!-- 💡 GOOGLE DRIVE PHOTO URL INSTRUCTION: 
+               Replace the URL in src="" with your Google Drive direct image link 
+               Example format: https://lh3.googleusercontent.com/d/YOUR_FILE_ID
+          -->
+          <img 
+            id="profileImage"
+            src="https://via.placeholder.com/170?text=Paste+Photo+URL" 
+            alt="Riyaz Ahmad" 
+            class="photo-frame"
+            onerror="this.src='https://via.placeholder.com/170?text=Photo+Error'"
+          >
+        </div>
+
+        <div class="user-info">
+          <h1>Riyaz Ahmad</h1>
+          <span class="badge"><i class="fa-solid fa-briefcase"></i> Head Incharge at UPS, Patna City</span>
+          <p>An educator, lifelong learner, and technology enthusiast dedicated to shaping young minds and contributing to nation-building.</p>
+          <div class="location-tag">
+            <i class="fa-solid fa-location-dot"></i> Mathurapur, Katihar, Bihar, India
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- CONTENT GRID -->
+    <div class="grid-container">
+      
+      <!-- LEFT MAIN COLUMN -->
+      <div class="main-column">
+        
+        <!-- ABOUT ME -->
+        <div class="card">
+          <div class="section-title">
+            <i class="fa-solid fa-user-check"></i> About Me
+          </div>
+          <p style="font-size: 14.5px; color: var(--text-main); text-align: justify; margin-bottom: 15px;">
+            Driven by a deep passion for education, I believe that teaching is a noble profession and that teachers are the true builders of the nation. My journey in education is built on discipline, integrity, and continuous self-improvement—values instilled in me during my early school days by my family and mentors.
+          </p>
+          <p style="font-size: 14.5px; color: var(--text-main); text-align: justify;">
+            Alongside my core teaching background in Zoology and Life Sciences, I am fascinated by modern technology, web development, and financial market analysis.
+          </p>
+        </div>
+
+        <!-- ACADEMIC QUALIFICATIONS -->
+        <div class="card">
+          <div class="section-title">
+            <i class="fa-solid fa-graduation-cap"></i> Academic Qualifications
+          </div>
+          <div class="timeline">
+            <div class="timeline-item">
+              <h4>M.Sc. in Zoology (First Class)</h4>
+              <p>P.C. Purnea | BNMU, Madhepura</p>
+            </div>
+            <div class="timeline-item">
+              <h4>B.Sc. in Zoology (First Class)</h4>
+              <p>D.S. College, Katihar | BNMU, Madhepura</p>
+            </div>
+            <div class="timeline-item">
+              <h4>I.Sc. (Biological Sciences)</h4>
+              <p>R.D.S. College | BSEB Board</p>
+            </div>
+            <div class="timeline-item">
+              <h4>Matriculation (10th)</h4>
+              <p>H.S. Abadpur | BSEB Board — <strong>School Topper</strong></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- PROFESSIONAL & OTHER TRAINING -->
+        <div class="card">
+          <div class="section-title">
+            <i class="fa-solid fa-certificate"></i> Professional & Certifications
+          </div>
+          <ul class="custom-list">
+            <li>
+              <i class="fa-solid fa-award"></i>
+              <div>
+                <strong>B.Ed. (Life Science)</strong> — CTE, Asansol (MANUU) <em>[Pursuing]</em>
+              </div>
+            </li>
+            <li>
+              <i class="fa-solid fa-award"></i>
+              <div>
+                <strong>D.El.Ed.</strong> — DIET, Kishanganj (BSEB)
+              </div>
+            </li>
+            <li>
+              <i class="fa-solid fa-award"></i>
+              <div>
+                <strong>Aviation, Hospitality & Travel Management</strong> — Frankfinn Institute, Salt Lake City, Kolkata
+              </div>
+            </li>
+            <li>
+              <i class="fa-solid fa-award"></i>
+              <div>
+                <strong>Short-term Certifications:</strong> UCC (Jamia Millia Islamia, New Delhi) & IGC (World English Institute)
+              </div>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+
+      <!-- RIGHT SIDEBAR COLUMN -->
+      <div class="sidebar-column">
+        
+        <!-- TECHNICAL SKILLS -->
+        <div class="card">
+          <div class="section-title">
+            <i class="fa-solid fa-laptop-code"></i> Technical Skills
+          </div>
+          <div class="skills-flex">
+            <span class="skill-tag">ADCA</span>
+            <span class="skill-tag">HTML</span>
+            <span class="skill-tag">SEO</span>
+            <span class="skill-tag">Web Designing</span>
+            <span class="skill-tag">Fundamental Analysis</span>
+            <span class="skill-tag">Technical Analysis</span>
+          </div>
+        </div>
+
+        <!-- STRENGTHS -->
+        <div class="card">
+          <div class="section-title">
+            <i class="fa-solid fa-bolt"></i> Key Strengths
+          </div>
+          <div>
+            <span class="strength-chip"><i class="fa-solid fa-check"></i> Positive Attitude</span>
+            <span class="strength-chip"><i class="fa-solid fa-check"></i> Punctuality</span>
+            <span class="strength-chip"><i class="fa-solid fa-check"></i> Leadership</span>
+            <span class="strength-chip"><i class="fa-solid fa-check"></i> Teamwork</span>
+            <span class="strength-chip"><i class="fa-solid fa-check"></i> Hard Work</span>
+          </div>
+        </div>
+
+        <!-- ACHIEVEMENTS -->
+        <div class="card">
+          <div class="section-title">
+            <i class="fa-solid fa-trophy"></i> Achievements
+          </div>
+          <ul class="custom-list">
+            <li>
+              <i class="fa-solid fa-star" style="color: #eab308;"></i>
+              <span><strong>School Topper</strong> in Matriculation at H.S. Abadpur (Awarded by Principal).</span>
+            </li>
+            <li>
+              <i class="fa-solid fa-star" style="color: #eab308;"></i>
+              <span><strong>1st Prize</strong> in Block/Sub-Division Level Leprosy Awareness Quiz Test.</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- HOBBIES -->
+        <div class="card">
+          <div class="section-title">
+            <i class="fa-solid fa-heart"></i> Hobbies & Interests
+          </div>
+          <ul class="custom-list">
+            <li><i class="fa-solid fa-globe"></i> Surfing the Web</li>
+            <li><i class="fa-solid fa-book"></i> Reading Books</li>
+            <li><i class="fa-solid fa-comments"></i> Interacting with People</li>
+            <li><i class="fa-solid fa-chart-line"></i> Financial Market Analysis</li>
+            <li><i class="fa-solid fa-plane"></i> Visiting New Places</li>
+          </ul>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- FOOTER -->
+    <footer>
+      <p>&copy; 2026 Riyaz Ahmad. All Rights Reserved.</p>
+    </footer>
+
+  </div>
+
+  <script>
+    // Google Drive URL to Direct Image Converter Function
+    function setDrivePhotoUrl(driveUrl) {
+      if (!driveUrl) return;
+      let fileId = "";
+      const idMatch = driveUrl.match(/\/d\/([a-zA-Z0-9_-]+)/) || driveUrl.match(/id=([a-zA-Z0-9_-]+)/);
+      if (idMatch && idMatch[1]) {
+        fileId = idMatch[1];
+        // Generate direct Google photo link
+        const directUrl = `https://lh3.googleusercontent.com/d/${fileId}`;
+        document.getElementById("profileImage").src = directUrl;
+      } else if (driveUrl.startsWith("http")) {
+        document.getElementById("profileImage").src = driveUrl;
+      }
+    }
+
+    // 💡 APNI GOOGLE DRIVE LINK YAHAN REPLACE KAREIN:
+    // EXAMPLE: setDrivePhotoUrl("https://drive.google.com/file/d/1ABCXYZ.../view");
+    const MY_GOOGLE_DRIVE_PHOTO_URL = "https://drive.google.com/file/d/0B6hCg9DSzp_rcU1DWW1aVW94bUE/view?usp=drivesdk"; 
+    
+    if (MY_GOOGLE_DRIVE_PHOTO_URL) {
+      setDrivePhotoUrl(MY_GOOGLE_DRIVE_PHOTO_URL);
+    }
+  </script>
+</body>
+</html>
