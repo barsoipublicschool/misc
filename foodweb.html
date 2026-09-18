@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FoodExpress - Delicious food, delivered to your door.</title>
+  <meta name="description" content="Order food online from top restaurants near you. Fast delivery, fresh food, best deals." />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              green: '#10B981',
+              darkgreen: '#059669',
+              orange: '#F97316',
+              navy: '#0F172A',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React & ReactDOM CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <!-- Babel Compiler for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased selection:bg-emerald-500 selection:text-white">
+
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, createContext, useContext } = React;
+
+    // ==========================================
+    // DEMO DATA: 10 RESTAURANTS & 24 PRODUCTS
+    // ==========================================
+    const DEMO_RESTAURANTS = [
+      { id: 'r1', name: 'Pizza Hub', logo: 'https://images.unsplash.com/photo-1590846406792-0adc7f938f1d?w=200&q=80', coverImage: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&q=80', cuisine: 'Pizza, Italian, Fast Food', rating: 4.8, reviews: 340, time: '25-30 min', fee: 40, minOrder: 200, isVeg: false, offer: '50% OFF up to ₹100', isOpen: true },
+      { id: 'r2', name: 'Biryani House', logo: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=200&q=80', coverImage: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=800&q=80', cuisine: 'Biryani, Mughlai, North Indian', rating: 4.7, reviews: 520, time: '30-40 min', fee: 30, minOrder: 250, isVeg: false, offer: '20% OFF', isOpen: true },
+      { id: 'r3', name: 'Burger Point', logo: 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=200&q=80', coverImage: 'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=800&q=80', cuisine: 'Burgers, Snacks, Fast Food', rating: 4.5, reviews: 210, time: '20-25 min', fee: 25, minOrder: 150, isVeg: false, offer: 'Free Delivery', isOpen: true },
+      { id: 'r4', name: 'The Chinese Bowl', logo: 'https://images.unsplash.com/photo-1525755662778-989d0524087e?w=200&q=80', coverImage: 'https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?w=800&q=80', cuisine: 'Chinese, Asian, Noodles', rating: 4.6, reviews: 180, time: '25-35 min', fee: 35, minOrder: 200, isVeg: false, offer: 'Flat ₹50 OFF', isOpen: true },
+      { id: 'r5', name: 'Royal Indian Kitchen', logo: 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=200&q=80', coverImage: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800&q=80', cuisine: 'North Indian, Curry, Thali', rating: 4.9, reviews: 640, time: '35-45 min', fee: 40, minOrder: 300, isVeg: false, offer: '15% OFF', isOpen: true },
+      { id: 'r6', name: 'South Indian Corner', logo: 'https://images.unsplash.com/photo-1610192244261-3f33de3f55e4?w=200&q=80', coverImage: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=800&q=80', cuisine: 'South Indian, Dosa, Idli', rating: 4.4, reviews: 195, time: '15-25 min', fee: 20, minOrder: 100, isVeg: true, offer: '10% OFF', isOpen: true },
+      { id: 'r7', name: 'Spice Garden', logo: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200&q=80', coverImage: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&q=80', cuisine: 'Rolls, Kebabs, Street Food', rating: 4.3, reviews: 130, time: '20-30 min', fee: 30, minOrder: 120, isVeg: false, offer: 'Combo Deals', isOpen: true },
+      { id: 'r8', name: 'Dessert World', logo: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=200&q=80', coverImage: 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=800&q=80', cuisine: 'Cakes, Ice Creams, Desserts', rating: 4.9, reviews: 410, time: '20-25 min', fee: 25, minOrder: 150, isVeg: true, offer: 'BUY 1 GET 1', isOpen: true },
+      { id: 'r9', name: 'Beverage Express', logo: 'https://images.unsplash.com/photo-1517256064527-09c73fc73e38?w=200&q=80', coverImage: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=800&q=80', cuisine: 'Beverages, Coffee, Shakes', rating: 4.6, reviews: 280, time: '15-20 min', fee: 15, minOrder: 99, isVeg: true, offer: '20% OFF', isOpen: true },
+      { id: 'r10', name: 'Taste of India', logo: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=200&q=80', coverImage: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800&q=80', cuisine: 'Thali, Indian, Street Food', rating: 4.5, reviews: 310, time: '30-40 min', fee: 30, minOrder: 200, isVeg: true, offer: 'Flat ₹40 OFF', isOpen: true }
+    ];
+
+    const DEMO_PRODUCTS = [
+      { id: 'p1', name: 'Margherita Pizza', price: 249, discount: 10, category: 'Pizza', isVeg: true, rating: 4.8, restaurantId: 'r1', restaurantName: 'Pizza Hub', prepTime: '20 min', image: 'https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?w=600&q=80', desc: 'Classic delight with 100% real mozzarella cheese.', ingredients: ['Mozzarella', 'Tomato Sauce', 'Basil'] },
+      { id: 'p2', name: 'Farmhouse Pizza', price: 349, discount: 15, category: 'Pizza', isVeg: true, rating: 4.7, restaurantId: 'r1', restaurantName: 'Pizza Hub', prepTime: '25 min', image: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=600&q=80', desc: 'Delightful combination of onion, capsicum, tomato & mushroom.', ingredients: ['Capsicum', 'Mushroom', 'Cheese'] },
+      { id: 'p3', name: 'Paneer Tikka Pizza', price: 399, discount: 20, category: 'Pizza', isVeg: true, rating: 4.9, restaurantId: 'r1', restaurantName: 'Pizza Hub', prepTime: '25 min', image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=600&q=80', desc: 'Loaded with spiced cottage cheese cubes & crisp capsicum.', ingredients: ['Paneer Tikka', 'Onion', 'Spices'] },
+      { id: 'p4', name: 'Special Chicken Biryani', price: 299, discount: 10, category: 'Biryani', isVeg: false, rating: 4.9, restaurantId: 'r2', restaurantName: 'Biryani House', prepTime: '30 min', image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&q=80', desc: 'Richly flavored aromatic rice layered with juicy tender chicken.', ingredients: ['Basmati Rice', 'Chicken', 'Saffron'] },
+      { id: 'p5', name: 'Royal Veg Biryani', price: 229, discount: 5, category: 'Biryani', isVeg: true, rating: 4.5, restaurantId: 'r2', restaurantName: 'Biryani House', prepTime: '25 min', image: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=600&q=80', desc: 'Basmati rice cooked with fresh vegetables and secret spices.', ingredients: ['Basmati Rice', 'Mix Veggies', 'Ghee'] },
+      { id: 'p6', name: 'Butter Chicken', price: 380, discount: 15, category: 'North Indian', isVeg: false, rating: 4.8, restaurantId: 'r5', restaurantName: 'Royal Indian Kitchen', prepTime: '30 min', image: 'https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=600&q=80', desc: 'Tender chicken cooked in rich tomato butter sauce.', ingredients: ['Chicken', 'Butter', 'Cream', 'Tomato'] },
+      { id: 'p7', name: 'Paneer Butter Masala', price: 310, discount: 10, category: 'North Indian', isVeg: true, rating: 4.7, restaurantId: 'r5', restaurantName: 'Royal Indian Kitchen', prepTime: '25 min', image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=600&q=80', desc: 'Cottage cheese cubes simmered in creamy gravy.', ingredients: ['Paneer', 'Butter', 'Cashew Gravy'] },
+      { id: 'p8', name: 'Chicken Tikka', price: 299, discount: 10, category: 'Starters', isVeg: false, rating: 4.6, restaurantId: 'r7', restaurantName: 'Spice Garden', prepTime: '20 min', image: 'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=600&q=80', desc: 'Smoky charcoal grilled marinated chicken pieces.', ingredients: ['Chicken', 'Yogurt', 'Tandoori Spices'] },
+      { id: 'p9', name: 'Classic Veg Burger', price: 129, discount: 5, category: 'Burger', isVeg: true, rating: 4.4, restaurantId: 'r3', restaurantName: 'Burger Point', prepTime: '15 min', image: 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=600&q=80', desc: 'Crispy veggie patty with lettuce and Mayo.', ingredients: ['Veg Patty', 'Lettuce', 'Burger Sauce'] },
+      { id: 'p10', name: 'Crispy Chicken Burger', price: 189, discount: 12, category: 'Burger', isVeg: false, rating: 4.7, restaurantId: 'r3', restaurantName: 'Burger Point', prepTime: '15 min', image: 'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=600&q=80', desc: 'Juicy fried chicken fillet with cheese and pickles.', ingredients: ['Chicken Fillet', 'Cheese', 'Mayo'] },
+      { id: 'p11', name: 'Ultimate Cheese Burger', price: 219, discount: 15, category: 'Burger', isVeg: true, rating: 4.8, restaurantId: 'r3', restaurantName: 'Burger Point', prepTime: '15 min', image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&q=80', desc: 'Double cheese slice loaded veggie burger.', ingredients: ['Double Cheese', 'Veg Patty', 'Sauce'] },
+      { id: 'p12', name: 'Peri Peri French Fries', price: 99, discount: 0, category: 'Burger', isVeg: true, rating: 4.5, restaurantId: 'r3', restaurantName: 'Burger Point', prepTime: '10 min', image: 'https://images.unsplash.com/photo-1576107232684-1279f3908594?w=600&q=80', desc: 'Crispy potato fries tossed in spicy peri peri spice.', ingredients: ['Potato', 'Peri Peri Spice'] },
+      { id: 'p13', name: 'Veg Hakka Noodles', price: 179, discount: 10, category: 'Chinese', isVeg: true, rating: 4.6, restaurantId: 'r4', restaurantName: 'The Chinese Bowl', prepTime: '20 min', image: 'https://images.unsplash.com/photo-1585032226651-759b368d7246?w=600&q=80', desc: 'Stir-fried noodles with crunchy vegetables.', ingredients: ['Noodles', 'Bell Peppers', 'Soy Sauce'] },
+      { id: 'p14', name: 'Veg Manchurian Gravy', price: 199, discount: 10, category: 'Chinese', isVeg: true, rating: 4.5, restaurantId: 'r4', restaurantName: 'The Chinese Bowl', prepTime: '20 min', image: 'https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?w=600&q=80', desc: 'Vegetable dumplings in savory ginger garlic gravy.', ingredients: ['Veg Balls', 'Garlic', 'Chilli Sauce'] },
+      { id: 'p15', name: 'Chicken Chowmein', price: 229, discount: 15, category: 'Chinese', isVeg: false, rating: 4.7, restaurantId: 'r4', restaurantName: 'The Chinese Bowl', prepTime: '20 min', image: 'https://images.unsplash.com/photo-1612927601601-6638404737ce?w=600&q=80', desc: 'Classic stir-fried noodles with chicken strips.', ingredients: ['Noodles', 'Chicken', 'Spring Onion'] },
+      { id: 'p16', name: 'Masala Butter Dosa', price: 149, discount: 10, category: 'South Indian', isVeg: true, rating: 4.8, restaurantId: 'r6', restaurantName: 'South Indian Corner', prepTime: '15 min', image: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=600&q=80', desc: 'Crispy rice crepe filled with potato masala and butter.', ingredients: ['Rice Batter', 'Potato Masala', 'Butter'] },
+      { id: 'p17', name: 'Paneer Kathi Roll', price: 139, discount: 5, category: 'Rolls', isVeg: true, rating: 4.4, restaurantId: 'r7', restaurantName: 'Spice Garden', prepTime: '15 min', image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=600&q=80', desc: 'Spiced paneer wrapped in flaky paratha.', ingredients: ['Paneer', 'Paratha', 'Mint Chutney'] },
+      { id: 'p18', name: 'Chicken Malai Roll', price: 169, discount: 10, category: 'Rolls', isVeg: false, rating: 4.6, restaurantId: 'r7', restaurantName: 'Spice Garden', prepTime: '15 min', image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=600&q=80', desc: 'Creamy chicken tikka rolled in soft flatbread.', ingredients: ['Chicken Tikka', 'Mayo', 'Onion'] },
+      { id: 'p19', name: 'Belgian Chocolate Cake', price: 499, discount: 20, category: 'Cakes', isVeg: true, rating: 4.9, restaurantId: 'r8', restaurantName: 'Dessert World', prepTime: '10 min', image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=600&q=80', desc: 'Rich chocolate ganache layer cake.', ingredients: ['Dark Chocolate', 'Cocoa', 'Cream'] },
+      { id: 'p20', name: 'Gulab Jamun (4 Pcs)', price: 99, discount: 0, category: 'Desserts', isVeg: true, rating: 4.7, restaurantId: 'r8', restaurantName: 'Dessert World', prepTime: '5 min', image: 'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=600&q=80', desc: 'Soft milk solid balls soaked in cardamom sugar syrup.', ingredients: ['Khoya', 'Sugar Syrup', 'Cardamom'] },
+      { id: 'p21', name: 'Cold Coffee with Ice Cream', price: 120, discount: 10, category: 'Beverages', isVeg: true, rating: 4.8, restaurantId: 'r9', restaurantName: 'Beverage Express', prepTime: '10 min', image: 'https://images.unsplash.com/photo-1517256064527-09c73fc73e38?w=600&q=80', desc: 'Thick blended coffee topped with vanilla ice cream.', ingredients: ['Espresso', 'Milk', 'Vanilla Ice Cream'] },
+      { id: 'p22', name: 'Fresh Mango Shake', price: 110, discount: 5, category: 'Beverages', isVeg: true, rating: 4.6, restaurantId: 'r9', restaurantName: 'Beverage Express', prepTime: '10 min', image: 'https://images.unsplash.com/photo-1546173159-315724a31696?w=600&q=80', desc: 'Real Alphonso mango pulp blended with milk.', ingredients: ['Mango', 'Milk', 'Nuts'] },
+      { id: 'p23', name: 'Special Masala Chai', price: 49, discount: 0, category: 'Beverages', isVeg: true, rating: 4.9, restaurantId: 'r9', restaurantName: 'Beverage Express', prepTime: '10 min', image: 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=600&q=80', desc: 'Aromatic tea brewed with ginger, cardamom, and clove.', ingredients: ['Tea Leaves', 'Milk', 'Ginger', 'Cardamom'] },
+      { id: 'p24', name: 'Fresh Lime Soda', price: 69, discount: 0, category: 'Beverages', isVeg: true, rating: 4.5, restaurantId: 'r9', restaurantName: 'Beverage Express', prepTime: '5 min', image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&q=80', desc: 'Refreshing lemon juice with sparkling soda.', ingredients: ['Lemon Juice', 'Soda', 'Mint'] }
+    ];
+
+    // Context Setup
+    const AppContext = createContext();
+
+    const AppProvider = ({ children }) => {
+      const [cart, setCart] = useState([]);
+      const [user, setUser] = useState({ name: 'Demo Customer', role: 'customer', email: 'customer@foodexpress.demo' });
+      const [currentRoute, setCurrentRoute] = useState('home'); // home, search, cart, checkout, success, admin, restaurantAdmin
+      const [activeProductModal, setActiveProductModal] = useState(null);
+      const [appliedCoupon, setAppliedCoupon] = useState(null);
+      const [selectedCategory, setSelectedCategory] = useState('All');
+      const [lastOrderId, setLastOrderId] = useState('ORD-849201');
+
+      const addToCart = (product) => {
+        setCart(prev => {
+          const exists = prev.find(i => i.product.id === product.id);
+          if (exists) {
+            return prev.map(i => i.product.id === product.id ? { ...i, qty: i.qty + 1 } : i);
+          }
+          return [...prev, { product, qty: 1 }];
+        });
+      };
+
+      const updateQty = (id, delta) => {
+        setCart(prev => prev.map(i => {
+          if (i.product.id === id) {
+            const newQty = i.qty + delta;
+            return newQty > 0 ? { ...i, qty: newQty } : null;
+          }
+          return i;
+        }).filter(Boolean));
+      };
+
+      const clearCart = () => {
+        setCart([]);
+        setAppliedCoupon(null);
+      };
+
+      const subtotal = cart.reduce((sum, item) => sum + (item.product.price * item.qty), 0);
+      const deliveryFee = cart.length > 0 ? 40 : 0;
+      const tax = Math.round(subtotal * 0.05);
+
+      let discount = 0;
+      if (appliedCoupon) {
+        if (appliedCoupon === 'WELCOME50') discount = Math.min(Math.round(subtotal * 0.5), 100);
+        if (appliedCoupon === 'FOOD20') discount = Math.min(Math.round(subtotal * 0.2), 150);
+        if (appliedCoupon === 'SAVE100' && subtotal >= 499) discount = 100;
+      }
+
+      const grandTotal = Math.max(0, subtotal + deliveryFee + tax - discount);
+
+      return (
+        <AppContext.Provider value={{
+          cart, addToCart, updateQty, clearCart, user, setUser,
+          currentRoute, setCurrentRoute, activeProductModal, setActiveProductModal,
+          subtotal, deliveryFee, tax, discount, grandTotal, appliedCoupon, setAppliedCoupon,
+          selectedCategory, setSelectedCategory, lastOrderId, setLastOrderId
+        }}>
+          {children}
+        </AppContext.Provider>
+      );
+    };
+
+    const useApp = () => useContext(AppContext);
+
+    // ==========================================
+    // COMPONENTS
+    // ==========================================
+
+    const Header = () => {
+      const { cart, currentRoute, setCurrentRoute, user, setUser } = useApp();
+      const totalCount = cart.reduce((sum, i) => sum + i.qty, 0);
+
+      return (
+        <header className="sticky top-0 z-40 bg-white border-b border-slate-100 shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
+            {/* Logo */}
+            <div onClick={() => setCurrentRoute('home')} className="flex items-center gap-2 cursor-pointer">
+              <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white font-extrabold text-xl shadow-md shadow-emerald-200">
+                F
+              </div>
+              <div>
+                <span className="text-xl font-extrabold text-slate-900 tracking-tight">Food<span className="text-emerald-600">Express</span></span>
+                <span className="hidden sm:block text-[10px] text-slate-500 font-medium">Delicious food to your door</span>
+              </div>
+            </div>
+
+            {/* Navigation Buttons */}
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setCurrentRoute('search')}
+                className="p-2 text-slate-600 hover:text-emerald-600 transition"
+              >
+                <i data-lucide="search" className="w-5 h-5"></i>
+              </button>
+
+              <button 
+                onClick={() => setCurrentRoute('cart')}
+                className="relative p-2 text-slate-600 hover:text-emerald-600 transition"
+              >
+                <i data-lucide="shopping-bag" className="w-6 h-6"></i>
+                {totalCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white">
+                    {totalCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Demo Login Switcher */}
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-semibold text-slate-700">
+                <button 
+                  onClick={() => { setUser({ name: 'Customer', role: 'customer' }); setCurrentRoute('home'); }} 
+                  className={`px-2 py-1 rounded-lg ${user.role === 'customer' ? 'bg-white shadow text-emerald-600' : ''}`}
+                >
+                  User
+                </button>
+                <button 
+                  onClick={() => { setUser({ name: 'Restaurant', role: 'restaurant' }); setCurrentRoute('restaurantAdmin'); }} 
+                  className={`px-2 py-1 rounded-lg ${user.role === 'restaurant' ? 'bg-white shadow text-emerald-600' : ''}`}
+                >
+                  Rest
+                </button>
+                <button 
+                  onClick={() => { setUser({ name: 'Admin', role: 'admin' }); setCurrentRoute('admin'); }} 
+                  className={`px-2 py-1 rounded-lg ${user.role === 'admin' ? 'bg-white shadow text-emerald-600' : ''}`}
+                >
+                  Admin
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+      );
+    };
+
+    const FoodCard = ({ product }) => {
+      const { addToCart, cart, updateQty, setActiveProductModal } = useApp();
+      const inCart = cart.find(i => i.product.id === product.id);
+
+      return (
+        <div className="bg-white rounded-2xl p-3 border border-slate-100 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+          <div onClick={() => setActiveProductModal(product)} className="cursor-pointer">
+            <div className="relative aspect-video w-full rounded-xl overflow-hidden mb-3 bg-slate-100">
+              <img 
+                src={product.image} 
+                alt={product.name} 
+                className="w-full h-full object-cover hover:scale-105 transition duration-300"
+                onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80'; }}
+              />
+              <span className={`absolute top-2 left-2 px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-wider text-white ${product.isVeg ? 'bg-emerald-600' : 'bg-red-600'}`}>
+                {product.isVeg ? 'VEG' : 'NON-VEG'}
+              </span>
+              {product.discount > 0 && (
+                <span className="absolute top-2 right-2 bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow">
+                  {product.discount}% OFF
+                </span>
+              )}
+            </div>
+
+            <div className="flex justify-between items-start mb-1">
+              <h3 className="font-bold text-slate-900 text-sm line-clamp-1">{product.name}</h3>
+              <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                ★ {product.rating}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500 line-clamp-2 mb-3">{product.desc}</p>
+          </div>
+
+          <div className="flex items-center justify-between pt-2 border-t border-slate-50">
+            <div>
+              <span className="font-extrabold text-slate-900 text-sm">₹{product.price}</span>
+            </div>
+
+            {inCart ? (
+              <div className="flex items-center gap-2 bg-emerald-600 text-white rounded-lg px-2 py-1 text-xs font-bold shadow-sm">
+                <button onClick={() => updateQty(product.id, -1)} className="px-1">-</button>
+                <span>{inCart.qty}</span>
+                <button onClick={() => updateQty(product.id, 1)} className="px-1">+</button>
+              </div>
+            ) : (
+              <button 
+                onClick={() => addToCart(product)}
+                className="bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-xs"
+              >
+                + ADD
+              </button>
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    // ==========================================
+    // PAGES
+    // ==========================================
+
+    const HomePage = () => {
+      const { setCurrentRoute, setSelectedCategory } = useApp();
+
+      const categories = [
+        { name: 'Pizza', icon: '🍕' },
+        { name: 'Burger', icon: '🍔' },
+        { name: 'Biryani', icon: '🍲' },
+        { name: 'Chinese', icon: '🥢' },
+        { name: 'South Indian', icon: '🥘' },
+        { name: 'Desserts', icon: '🍰' },
+        { name: 'Beverages', icon: '🥤' }
+      ];
+
+      return (
+        <div className="pb-16">
+          {/* Hero Banner */}
+          <section className="bg-gradient-to-r from-emerald-800 to-teal-900 text-white py-12 px-4">
+            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
+              <div className="space-y-4 max-w-lg">
+                <span className="px-3 py-1 bg-emerald-500/30 text-emerald-200 text-xs font-bold rounded-full border border-emerald-400/20">
+                  ⚡ 30 Min Express Delivery
+                </span>
+                <h1 className="text-3xl sm:text-5xl font-black leading-tight">
+                  Delicious Food, <br /><span className="text-orange-400">Delivered To Your Door.</span>
+                </h1>
+                <p className="text-emerald-100 text-sm">Order from top restaurants near you with real-time tracking.</p>
+                <button 
+                  onClick={() => setCurrentRoute('search')} 
+                  className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow-lg transition"
+                >
+                  Explore Dishes
+                </button>
+              </div>
+              <div className="w-full md:w-1/2 max-w-md">
+                <img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=80" className="rounded-3xl shadow-2xl h-64 object-cover w-full" />
+              </div>
+            </div>
+          </section>
+
+          {/* Categories */}
+          <section className="max-w-7xl mx-auto px-4 py-8">
+            <h2 className="text-lg font-bold text-slate-900 mb-4">Popular Categories</h2>
+            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+              {categories.map((c, i) => (
+                <div 
+                  key={i} 
+                  onClick={() => { setSelectedCategory(c.name); setCurrentRoute('search'); }}
+                  className="flex flex-col items-center justify-center min-w-[90px] p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-emerald-500 cursor-pointer transition"
+                >
+                  <span className="text-3xl mb-1">{c.icon}</span>
+                  <span className="text-xs font-bold text-slate-800">{c.name}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Restaurants */}
+          <section className="max-w-7xl mx-auto px-4 py-6">
+            <h2 className="text-lg font-bold text-slate-900 mb-4">Top Rated Restaurants</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {DEMO_RESTAURANTS.slice(0, 6).map(r => (
+                <div key={r.id} className="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-md transition">
+                  <img src={r.coverImage} className="w-full h-36 object-cover" />
+                  <div className="p-4 space-y-2">
+                    <div className="flex justify-between items-start">
+                      <h3 className="font-extrabold text-slate-900 text-base">{r.name}</h3>
+                      <span className="bg-emerald-50 text-emerald-700 text-xs font-bold px-2 py-0.5 rounded">★ {r.rating}</span>
+                    </div>
+                    <p className="text-xs text-slate-500">{r.cuisine}</p>
+                    <div className="flex items-center gap-4 text-[11px] text-slate-500 pt-2 border-t border-slate-50 font-semibold">
+                      <span>🕒 {r.time}</span>
+                      <span>🚴 ₹{r.fee} Delivery</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Popular Dishes */}
+          <section className="max-w-7xl mx-auto px-4 py-6">
+            <h2 className="text-lg font-bold text-slate-900 mb-4">Popular Dishes</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {DEMO_PRODUCTS.slice(0, 8).map(p => (
+                <FoodCard key={p.id} product={p} />
+              ))}
+            </div>
+          </section>
+        </div>
+      );
+    };
+
+    const SearchPage = () => {
+      const { selectedCategory, setSelectedCategory } = useApp();
+      const [searchTerm, setSearchTerm] = useState('');
+      const [filterVeg, setFilterVeg] = useState('ALL');
+
+      const filtered = DEMO_PRODUCTS.filter(p => {
+        const matchesCategory = selectedCategory === 'All' || p.category.toLowerCase() === selectedCategory.toLowerCase();
+        const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.restaurantName.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesVeg = filterVeg === 'ALL' || (filterVeg === 'VEG' && p.isVeg) || (filterVeg === 'NONVEG' && !p.isVeg);
+        return matchesCategory && matchesSearch && matchesVeg;
+      });
+
+      return (
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="flex flex-col md:flex-row gap-4 justify-between items-center mb-6">
+            <h1 className="text-2xl font-black text-slate-900">Search & Filter Dishes</h1>
+            <input 
+              type="text" 
+              placeholder="Search for pizza, biryani, burgers..." 
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full md:w-80 px-4 py-2.5 border rounded-xl text-sm focus:outline-emerald-500"
+            />
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6">
+            {['All', 'Pizza', 'Burger', 'Biryani', 'Chinese', 'South Indian', 'Desserts', 'Beverages'].map(cat => (
+              <button 
+                key={cat} 
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition ${selectedCategory === cat ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700'}`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {filtered.map(p => (
+              <FoodCard key={p.id} product={p} />
+            ))}
+          </div>
+        </div>
+      );
+    };
+
+    const CartPage = () => {
+      const { cart, updateQty, subtotal, deliveryFee, tax, discount, grandTotal, appliedCoupon, setAppliedCoupon, setCurrentRoute, setLastOrderId, clearCart } = useApp();
+      const [couponInput, setCouponInput] = useState('');
+
+      const handleCheckout = () => {
+        const newOrderId = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
+        setLastOrderId(newOrderId);
+        clearCart();
+        setCurrentRoute('success');
+      };
+
+      if (cart.length === 0) {
+        return (
+          <div className="max-w-md mx-auto text-center py-20 px-4">
+            <div className="text-5xl mb-4">🛒</div>
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">Your Cart is Empty</h2>
+            <p className="text-xs text-slate-500 mb-6">Add delicious items from menu to place an order.</p>
+            <button onClick={() => setCurrentRoute('home')} className="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl text-xs">
+              Explore Menu
+            </button>
+          </div>
+        );
+      }
+
+      return (
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          <h1 className="text-2xl font-black text-slate-900 mb-6">Your Cart</h1>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-4">
+              {cart.map(({ product, qty }) => (
+                <div key={product.id} className="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <img src={product.image} className="w-16 h-16 rounded-xl object-cover" />
+                    <div>
+                      <h3 className="font-bold text-slate-900 text-sm">{product.name}</h3>
+                      <p className="text-xs text-slate-500">₹{product.price} each</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 bg-slate-100 rounded-lg px-2 py-1 text-xs font-bold">
+                      <button onClick={() => updateQty(product.id, -1)}>-</button>
+                      <span>{qty}</span>
+                      <button onClick={() => updateQty(product.id, 1)}>+</button>
+                    </div>
+                    <span className="font-bold text-slate-900 text-sm">₹{product.price * qty}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 space-y-4 h-fit">
+              <h3 className="font-bold text-slate-900 border-b pb-3">Bill Details</h3>
+              
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  placeholder="Coupon Code" 
+                  value={couponInput}
+                  onChange={e => setCouponInput(e.target.value)}
+                  className="flex-1 px-3 py-1.5 border rounded-xl text-xs"
+                />
+                <button 
+                  onClick={() => setAppliedCoupon(couponInput.toUpperCase())}
+                  className="px-3 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-xl"
+                >
+                  Apply
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400">Try: WELCOME50, FOOD20, SAVE100</p>
+
+              <div className="space-y-2 text-xs text-slate-600 pt-2 border-t">
+                <div className="flex justify-between"><span>Subtotal</span><span>₹{subtotal}</span></div>
+                <div className="flex justify-between"><span>Delivery Fee</span><span>₹{deliveryFee}</span></div>
+                <div className="flex justify-between"><span>Tax (5%)</span><span>₹{tax}</span></div>
+                {discount > 0 && <div className="flex justify-between text-emerald-600 font-bold"><span>Discount</span><span>-₹{discount}</span></div>}
+                <div className="flex justify-between font-black text-sm text-slate-900 pt-2 border-t"><span>To Pay</span><span>₹{grandTotal}</span></div>
+              </div>
+
+              <button 
+                onClick={handleCheckout} 
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition"
+              >
+                Place Order (₹{grandTotal})
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const OrderSuccessPage = () => {
+      const { lastOrderId, setCurrentRoute } = useApp();
+      return (
+        <div className="max-w-md mx-auto text-center py-20 px-4">
+          <div className="text-6xl mb-4">🎉</div>
+          <h1 className="text-2xl font-black text-slate-900 mb-2">Order Placed Successfully!</h1>
+          <p className="text-xs text-slate-500 mb-6">Your order ID is <span className="font-bold text-slate-800">#{lastOrderId}</span>. The restaurant is preparing your meal.</p>
+          <button onClick={() => setCurrentRoute('home')} className="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl text-xs">
+            Back to Home
+          </button>
+        </div>
+      );
+    };
+
+    const AdminDashboard = () => {
+      return (
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <h1 className="text-2xl font-black text-slate-900 mb-6">System Admin Panel</h1>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="bg-white p-5 rounded-2xl border border-slate-100">
+              <p className="text-xs text-slate-500 font-semibold">Total Revenue</p>
+              <p className="text-2xl font-black text-slate-900">₹1,48,200</p>
+            </div>
+            <div className="bg-white p-5 rounded-2xl border border-slate-100">
+              <p className="text-xs text-slate-500 font-semibold">Total Orders</p>
+              <p className="text-2xl font-black text-slate-900">1,240</p>
+            </div>
+            <div className="bg-white p-5 rounded-2xl border border-slate-100">
+              <p className="text-xs text-slate-500 font-semibold">Active Restaurants</p>
+              <p className="text-2xl font-black text-slate-900">10</p>
+            </div>
+            <div className="bg-white p-5 rounded-2xl border border-slate-100">
+              <p className="text-xs text-slate-500 font-semibold">Total Users</p>
+              <p className="text-2xl font-black text-slate-900">4,890</p>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const RestaurantDashboard = () => {
+      return (
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <h1 className="text-2xl font-black text-slate-900 mb-6">Restaurant Owner Panel (Pizza Hub)</h1>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white p-5 rounded-2xl border border-slate-100">
+              <p className="text-xs text-slate-500">Today's Sales</p>
+              <p className="text-xl font-bold">₹12,450</p>
+            </div>
+            <div className="bg-white p-5 rounded-2xl border border-slate-100">
+              <p className="text-xs text-slate-500">Active Orders</p>
+              <p className="text-xl font-bold">4 Orders</p>
+            </div>
+            <div className="bg-white p-5 rounded-2xl border border-slate-100">
+              <p className="text-xs text-slate-500">Menu Items</p>
+              <p className="text-xl font-bold">24 Items</p>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const ProductModal = () => {
+      const { activeProductModal, setActiveProductModal, addToCart } = useApp();
+      if (!activeProductModal) return null;
+
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl relative">
+            <button onClick={() => setActiveProductModal(null)} className="absolute top-3 right-3 bg-white/80 p-2 rounded-full font-bold">✕</button>
+            <img src={activeProductModal.image} className="w-full h-48 object-cover" />
+            <div className="p-6 space-y-3">
+              <div className="flex justify-between items-start">
+                <h2 className="text-xl font-extrabold text-slate-900">{activeProductModal.name}</h2>
+                <span className="text-emerald-600 font-black">₹{activeProductModal.price}</span>
+              </div>
+              <p className="text-xs text-slate-500">{activeProductModal.desc}</p>
+              <div className="pt-2">
+                <p className="text-[11px] font-bold text-slate-700 mb-1">Ingredients:</p>
+                <div className="flex flex-wrap gap-1">
+                  {activeProductModal.ingredients.map((ing, i) => (
+                    <span key={i} className="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded-full">{ing}</span>
+                  ))}
+                </div>
+              </div>
+              <button 
+                onClick={() => { addToCart(activeProductModal); setActiveProductModal(null); }}
+                className="w-full py-3 bg-emerald-600 text-white font-bold text-xs rounded-xl mt-4"
+              >
+                Add To Cart
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // Main App Routing Container
+    const MainApp = () => {
+      const { currentRoute } = useApp();
+
+      useEffect(() => {
+        if (window.lucide) {
+          window.lucide.createIcons();
+        }
+      });
+
+      return (
+        <div className="min-h-screen bg-slate-50 font-sans">
+          <Header />
+          <main>
+            {currentRoute === 'home' && <HomePage />}
+            {currentRoute === 'search' && <SearchPage />}
+            {currentRoute === 'cart' && <CartPage />}
+            {currentRoute === 'success' && <OrderSuccessPage />}
+            {currentRoute === 'admin' && <AdminDashboard />}
+            {currentRoute === 'restaurantAdmin' && <RestaurantDashboard />}
+          </main>
+          <ProductModal />
+        </div>
+      );
+    };
+
+    const App = () => (
+      <AppProvider>
+        <MainApp />
+      </AppProvider>
+    );
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
