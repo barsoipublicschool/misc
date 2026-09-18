@@ -42,7 +42,7 @@
   <script type="text/babel">
     const { useState, useEffect, createContext, useContext } = React;
 
-    const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbxDnnSaiaeemj_Xx1xRRJzmkXVG-35J6yXwLzGAb284qtSJy_UusVjtDKcaG59M0yfH/exec";
+    const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwlHyh3OFGrbaMDbuDEkdig0XntMwUmXPwhRhq_hkb-7_HqDJgCycuuAqT-b_AZ3D86/exec";
 
     const INITIAL_CATEGORIES = ['All', 'Pizza', 'Burger', 'Biryani', 'Chinese', 'Desserts'];
 
@@ -73,31 +73,29 @@
       const [couponCode, setCouponCode] = useState('');
       const [discountPercent, setDiscountPercent] = useState(0);
 
-      // Load Saved Order from LocalStorage on Launch
       useEffect(() => {
         const savedOrder = localStorage.getItem('foodexpress_active_order');
         if (savedOrder) {
-          try {
-            setActiveOrder(JSON.parse(savedOrder));
-          } catch (e) {}
+          try { setActiveOrder(JSON.parse(savedOrder)); } catch (e) {}
         }
       }, []);
 
-      // Auto Sync Status from Sheet every 5 seconds
+      // Auto Status Sync
       useEffect(() => {
-        if (!activeOrder || !activeOrder.orderId) return;
+        if (!activeOrder || (!activeOrder.orderId && !activeOrder.mobile)) return;
 
         const interval = setInterval(() => {
-          fetch(`${GOOGLE_SHEET_URL}?orderId=${activeOrder.orderId}`)
+          const queryParam = activeOrder.orderId ? `orderId=${activeOrder.orderId}` : `mobile=${activeOrder.mobile}`;
+          fetch(`${GOOGLE_SHEET_URL}?${queryParam}`)
             .then(res => res.json())
             .then(data => {
-              if (data && data.status) {
+              if (data && data.success) {
                 let step = 1;
                 if (data.status === 'Preparing') step = 2;
                 if (data.status === 'On the Way') step = 3;
                 if (data.status === 'Delivered') step = 4;
 
-                const updated = { ...activeOrder, statusStep: step, statusName: data.status };
+                const updated = { ...data, statusStep: step };
                 setActiveOrder(updated);
                 localStorage.setItem('foodexpress_active_order', JSON.stringify(updated));
               }
@@ -107,6 +105,26 @@
 
         return () => clearInterval(interval);
       }, [activeOrder]);
+
+      const fetchOrderByMobile = (mobileNum) => {
+        return fetch(`${GOOGLE_SHEET_URL}?mobile=${mobileNum}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.success) {
+              let step = 1;
+              if (data.status === 'Preparing') step = 2;
+              if (data.status === 'On the Way') step = 3;
+              if (data.status === 'Delivered') step = 4;
+
+              const orderData = { ...data, statusStep: step };
+              setActiveOrder(orderData);
+              localStorage.setItem('foodexpress_active_order', JSON.stringify(orderData));
+              return { success: true };
+            } else {
+              return { success: false, message: data.message || "Order not found!" };
+            }
+          });
+      };
 
       const addToCart = (product) => {
         setCart(prev => {
@@ -148,14 +166,13 @@
           mobile: orderDetails.mobile,
           address: orderDetails.address,
           paymentMethod: orderDetails.payment,
-          items: cart.map(i => `${i.product.name} (x${i.qty})`),
+          items: cart.map(i => `${i.product.name} (x${i.qty})`).join(', '),
           totalAmount: grandTotal,
           statusStep: 1,
-          statusName: 'Order Placed',
+          status: 'Order Placed',
           date: new Date().toISOString().split('T')[0]
         };
 
-        // Post Data to Google Sheet
         fetch(GOOGLE_SHEET_URL, {
           method: 'POST',
           mode: 'no-cors',
@@ -163,7 +180,6 @@
           body: JSON.stringify(payload)
         }).catch(err => console.error('Sheet update failed', err));
 
-        // Save order locally for persistence
         setActiveOrder(payload);
         localStorage.setItem('foodexpress_active_order', JSON.stringify(payload));
         
@@ -175,7 +191,7 @@
         <AppContext.Provider value={{
           customerTab, setCustomerTab, selectedRest, setSelectedRest,
           searchQuery, setSearchQuery, selectedCategory, setSelectedCategory,
-          products, restaurants, activeOrder,
+          products, restaurants, activeOrder, fetchOrderByMobile,
           cart, addToCart, updateCartQty, applyCoupon, couponCode, setCouponCode,
           subtotal, discountAmount, grandTotal, placeOrder
         }}>
@@ -186,22 +202,19 @@
 
     const useApp = () => useContext(AppContext);
 
-    // Customer Header
     const CustomerHeader = () => {
-      const { setCustomerTab, cart, activeOrder, searchQuery, setSearchQuery } = useApp();
+      const { setCustomerTab, cart, searchQuery, setSearchQuery } = useApp();
       const totalCartQty = cart.reduce((sum, item) => sum + item.qty, 0);
 
       return (
         <header className="sticky top-0 bg-white border-b border-slate-200 z-40 shadow-xs">
           <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
             
-            {/* Logo */}
             <div onClick={() => setCustomerTab('home')} className="flex items-center gap-2 cursor-pointer">
               <div className="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-extrabold text-lg">F</div>
               <span className="font-extrabold text-slate-900 text-xl tracking-tight">Food<span className="text-emerald-600">Express</span></span>
             </div>
 
-            {/* Search Bar */}
             <div className="flex-1 max-w-md hidden sm:block">
               <input 
                 type="text" 
@@ -212,13 +225,10 @@
               />
             </div>
 
-            {/* Header Actions */}
             <div className="flex items-center gap-3">
-              {activeOrder && (
-                <button onClick={() => setCustomerTab('tracking')} className="text-xs font-bold text-orange-600 bg-orange-50 px-3 py-2 rounded-xl flex items-center gap-1 border border-orange-200 animate-pulse">
-                  📍 Live Track
-                </button>
-              )}
+              <button onClick={() => setCustomerTab('tracking')} className="text-xs font-bold text-orange-600 bg-orange-50 px-3 py-2 rounded-xl flex items-center gap-1 border border-orange-200 hover:bg-orange-100">
+                📍 Track Order
+              </button>
 
               <button onClick={() => setCustomerTab('cart')} className="relative bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm hover:bg-emerald-700">
                 <span>🛒 Cart</span>
@@ -245,7 +255,6 @@
       return (
         <div className="max-w-7xl mx-auto px-4 py-6 space-y-8">
           
-          {/* Hero Banner */}
           <div className="bg-gradient-to-r from-emerald-700 to-teal-800 rounded-3xl p-6 sm:p-10 text-white relative overflow-hidden flex flex-col justify-center min-h-[200px]">
             <div className="relative z-10 max-w-lg space-y-2">
               <span className="bg-orange-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">Fast Delivery</span>
@@ -254,7 +263,6 @@
             </div>
           </div>
 
-          {/* Categories */}
           <div className="space-y-3">
             <h3 className="font-extrabold text-slate-900 text-lg">Popular Categories</h3>
             <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
@@ -270,7 +278,6 @@
             </div>
           </div>
 
-          {/* Top Restaurants */}
           <div className="space-y-4">
             <h3 className="font-extrabold text-slate-900 text-lg">Featured Restaurants</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -294,7 +301,6 @@
             </div>
           </div>
 
-          {/* Food Items Grid */}
           <div className="space-y-4">
             <h3 className="font-extrabold text-slate-900 text-lg">Trending Dishes</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -338,7 +344,6 @@
       return (
         <div className="max-w-5xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* Cart Items List */}
           <div className="lg:col-span-2 space-y-4">
             <h3 className="font-extrabold text-lg text-slate-900">Order Summary</h3>
             <div className="bg-white rounded-2xl border border-slate-200 divide-y">
@@ -360,7 +365,6 @@
               ))}
             </div>
 
-            {/* Coupon Code Input */}
             <div className="bg-white rounded-2xl border border-slate-200 p-4 flex gap-2">
               <input 
                 type="text" 
@@ -373,7 +377,6 @@
             </div>
           </div>
 
-          {/* Checkout Form */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200 space-y-4 h-fit shadow-xs">
             <h3 className="font-bold text-slate-900 text-sm border-b pb-2">Delivery Details</h3>
             
@@ -398,7 +401,6 @@
                 </select>
               </div>
 
-              {/* Bill Details */}
               <div className="border-t pt-3 space-y-1.5 text-xs text-slate-600">
                 <div className="flex justify-between"><span>Subtotal</span><span>₹{subtotal}</span></div>
                 <div className="flex justify-between text-emerald-600"><span>Discount</span><span>-₹{discountAmount}</span></div>
@@ -415,57 +417,94 @@
     };
 
     const LiveTrackingView = () => {
-      const { activeOrder, setCustomerTab } = useApp();
+      const { activeOrder, setCustomerTab, fetchOrderByMobile } = useApp();
+      const [inputMobile, setInputMobile] = useState('');
+      const [loading, setLoading] = useState(false);
+      const [errorMsg, setErrorMsg] = useState('');
 
-      if (!activeOrder) {
-        return (
-          <div className="max-w-md mx-auto py-16 text-center space-y-4">
-            <h3 className="font-bold text-lg text-slate-900">No Active Order Found</h3>
-            <button onClick={() => setCustomerTab('home')} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold">Go to Menu</button>
-          </div>
-        );
-      }
+      const handleSearch = (e) => {
+        e.preventDefault();
+        if (!inputMobile || inputMobile.length < 10) {
+          setErrorMsg('Please enter a valid 10-digit mobile number');
+          return;
+        }
+        setLoading(true);
+        setErrorMsg('');
+        fetchOrderByMobile(inputMobile)
+          .then(res => {
+            if (!res.success) setErrorMsg(res.message);
+          })
+          .finally(() => setLoading(false));
+      };
 
       return (
-        <div className="max-w-md mx-auto py-8 px-4">
-          <div className="bg-white border rounded-2xl p-6 space-y-6 shadow-sm">
-            <div className="text-center space-y-1">
-              <span className="text-[11px] font-extrabold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">{activeOrder.orderId}</span>
-              <h3 className="font-extrabold text-lg text-slate-900">Live Order Tracking</h3>
-              <p className="text-[11px] text-slate-400">Status auto-syncs with backend every 5s</p>
-            </div>
-
-            {/* Stepper Progress */}
-            <div className="space-y-4 text-xs font-bold pt-2">
-              {[
-                { step: 1, label: 'Order Placed', desc: 'Received and saved to system' },
-                { step: 2, label: 'Preparing', desc: 'Kitchen is preparing your order' },
-                { step: 3, label: 'On the Way', desc: 'Rider is carrying your food' },
-                { step: 4, label: 'Delivered', desc: 'Food delivered successfully' },
-              ].map(s => (
-                <div key={s.step} className="flex gap-4 items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs text-white ${activeOrder.statusStep >= s.step ? 'bg-emerald-600 font-extrabold' : 'bg-slate-200 text-slate-400'}`}>
-                    {s.step}
-                  </div>
-                  <div>
-                    <p className={activeOrder.statusStep >= s.step ? 'text-slate-900 font-bold' : 'text-slate-400'}>{s.label}</p>
-                    <p className="text-[10px] text-slate-400 font-normal">{s.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="border-t pt-4 text-xs text-slate-600 space-y-1">
-              <p><strong>Customer:</strong> {activeOrder.name} ({activeOrder.mobile})</p>
-              <p><strong>Items:</strong> {Array.isArray(activeOrder.items) ? activeOrder.items.join(', ') : activeOrder.items}</p>
-              <p><strong>Address:</strong> {activeOrder.address}</p>
-              <p><strong>Total Paid:</strong> ₹{activeOrder.totalAmount}</p>
-            </div>
-
-            <button onClick={() => setCustomerTab('home')} className="w-full py-2.5 bg-slate-100 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-200">
-              ← Back to Main Menu
-            </button>
+        <div className="max-w-md mx-auto py-8 px-4 space-y-6">
+          
+          {/* Mobile Search Box */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-xs">
+            <h4 className="font-extrabold text-slate-900 text-sm">🔍 Track Order by Mobile Number</h4>
+            <form onSubmit={handleSearch} className="flex gap-2">
+              <input 
+                type="tel" 
+                placeholder="Enter 10-digit Mobile No." 
+                value={inputMobile}
+                onChange={e => setInputMobile(e.target.value)}
+                className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+              <button type="submit" disabled={loading} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-700 disabled:opacity-50">
+                {loading ? 'Searching...' : 'Search'}
+              </button>
+            </form>
+            {errorMsg && <p className="text-[11px] font-bold text-red-500">{errorMsg}</p>}
           </div>
+
+          {/* Active Order Stepper Card */}
+          {activeOrder ? (
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-6 shadow-sm">
+              <div className="text-center space-y-1">
+                <span className="text-[11px] font-extrabold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">{activeOrder.orderId}</span>
+                <h3 className="font-extrabold text-lg text-slate-900">Live Order Tracking</h3>
+                <p className="text-[11px] text-slate-400">Status updates automatically from Google Sheet</p>
+              </div>
+
+              {/* Status Stepper */}
+              <div className="space-y-4 text-xs font-bold pt-2">
+                {[
+                  { step: 1, label: 'Order Placed', desc: 'Received and saved to system' },
+                  { step: 2, label: 'Preparing', desc: 'Kitchen is preparing your order' },
+                  { step: 3, label: 'On the Way', desc: 'Rider is carrying your food' },
+                  { step: 4, label: 'Delivered', desc: 'Food delivered successfully' },
+                ].map(s => (
+                  <div key={s.step} className="flex gap-4 items-center">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs text-white ${activeOrder.statusStep >= s.step ? 'bg-emerald-600 font-extrabold' : 'bg-slate-200 text-slate-400'}`}>
+                      {s.step}
+                    </div>
+                    <div>
+                      <p className={activeOrder.statusStep >= s.step ? 'text-slate-900 font-bold' : 'text-slate-400'}>{s.label}</p>
+                      <p className="text-[10px] text-slate-400 font-normal">{s.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Customer Details */}
+              <div className="border-t pt-4 text-xs text-slate-600 space-y-1">
+                <p><strong>Customer:</strong> {activeOrder.name} ({activeOrder.mobile})</p>
+                <p><strong>Items:</strong> {Array.isArray(activeOrder.items) ? activeOrder.items.join(', ') : activeOrder.items}</p>
+                <p><strong>Address:</strong> {activeOrder.address}</p>
+                <p><strong>Total Paid:</strong> ₹{activeOrder.totalAmount}</p>
+              </div>
+
+              <button onClick={() => setCustomerTab('home')} className="w-full py-2.5 bg-slate-100 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-200">
+                ← Back to Main Menu
+              </button>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-xs text-slate-400">
+              Enter your mobile number above to fetch active order details.
+            </div>
+          )}
+
         </div>
       );
     };
