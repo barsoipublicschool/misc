@@ -42,7 +42,6 @@
   <script type="text/babel">
     const { useState, useEffect, createContext, useContext } = React;
 
-    // Direct Web App URL Provided
     const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbxDnnSaiaeemj_Xx1xRRJzmkXVG-35J6yXwLzGAb284qtSJy_UusVjtDKcaG59M0yfH/exec";
 
     const INITIAL_CATEGORIES = ['All', 'Pizza', 'Burger', 'Biryani', 'Chinese', 'Desserts'];
@@ -62,7 +61,7 @@
     const AppContext = createContext();
 
     const AppProvider = ({ children }) => {
-      const [customerTab, setCustomerTab] = useState('home'); // 'home', 'cart', 'my-orders', 'tracking'
+      const [customerTab, setCustomerTab] = useState('home');
       const [selectedRest, setSelectedRest] = useState(null);
       const [searchQuery, setSearchQuery] = useState('');
       const [selectedCategory, setSelectedCategory] = useState('All');
@@ -73,6 +72,41 @@
       const [activeOrder, setActiveOrder] = useState(null);
       const [couponCode, setCouponCode] = useState('');
       const [discountPercent, setDiscountPercent] = useState(0);
+
+      // Load Saved Order from LocalStorage on Launch
+      useEffect(() => {
+        const savedOrder = localStorage.getItem('foodexpress_active_order');
+        if (savedOrder) {
+          try {
+            setActiveOrder(JSON.parse(savedOrder));
+          } catch (e) {}
+        }
+      }, []);
+
+      // Auto Sync Status from Sheet every 5 seconds
+      useEffect(() => {
+        if (!activeOrder || !activeOrder.orderId) return;
+
+        const interval = setInterval(() => {
+          fetch(`${GOOGLE_SHEET_URL}?orderId=${activeOrder.orderId}`)
+            .then(res => res.json())
+            .then(data => {
+              if (data && data.status) {
+                let step = 1;
+                if (data.status === 'Preparing') step = 2;
+                if (data.status === 'On the Way') step = 3;
+                if (data.status === 'Delivered') step = 4;
+
+                const updated = { ...activeOrder, statusStep: step, statusName: data.status };
+                setActiveOrder(updated);
+                localStorage.setItem('foodexpress_active_order', JSON.stringify(updated));
+              }
+            })
+            .catch(() => {});
+        }, 5000);
+
+        return () => clearInterval(interval);
+      }, [activeOrder]);
 
       const addToCart = (product) => {
         setCart(prev => {
@@ -116,6 +150,8 @@
           paymentMethod: orderDetails.payment,
           items: cart.map(i => `${i.product.name} (x${i.qty})`),
           totalAmount: grandTotal,
+          statusStep: 1,
+          statusName: 'Order Placed',
           date: new Date().toISOString().split('T')[0]
         };
 
@@ -127,7 +163,10 @@
           body: JSON.stringify(payload)
         }).catch(err => console.error('Sheet update failed', err));
 
-        setActiveOrder({ ...payload, statusStep: 1 });
+        // Save order locally for persistence
+        setActiveOrder(payload);
+        localStorage.setItem('foodexpress_active_order', JSON.stringify(payload));
+        
         setCart([]);
         setCustomerTab('tracking');
       };
@@ -147,7 +186,7 @@
 
     const useApp = () => useContext(AppContext);
 
-    // Customer Header (Hidden Admin & Restaurant buttons)
+    // Customer Header
     const CustomerHeader = () => {
       const { setCustomerTab, cart, activeOrder, searchQuery, setSearchQuery } = useApp();
       const totalCartQty = cart.reduce((sum, item) => sum + item.qty, 0);
@@ -176,7 +215,7 @@
             {/* Header Actions */}
             <div className="flex items-center gap-3">
               {activeOrder && (
-                <button onClick={() => setCustomerTab('tracking')} className="text-xs font-bold text-orange-600 bg-orange-50 px-3 py-2 rounded-xl flex items-center gap-1">
+                <button onClick={() => setCustomerTab('tracking')} className="text-xs font-bold text-orange-600 bg-orange-50 px-3 py-2 rounded-xl flex items-center gap-1 border border-orange-200 animate-pulse">
                   📍 Live Track
                 </button>
               )}
@@ -376,9 +415,16 @@
     };
 
     const LiveTrackingView = () => {
-      const { activeOrder } = useApp();
+      const { activeOrder, setCustomerTab } = useApp();
 
-      if (!activeOrder) return null;
+      if (!activeOrder) {
+        return (
+          <div className="max-w-md mx-auto py-16 text-center space-y-4">
+            <h3 className="font-bold text-lg text-slate-900">No Active Order Found</h3>
+            <button onClick={() => setCustomerTab('home')} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold">Go to Menu</button>
+          </div>
+        );
+      }
 
       return (
         <div className="max-w-md mx-auto py-8 px-4">
@@ -386,7 +432,7 @@
             <div className="text-center space-y-1">
               <span className="text-[11px] font-extrabold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">{activeOrder.orderId}</span>
               <h3 className="font-extrabold text-lg text-slate-900">Live Order Tracking</h3>
-              <p className="text-xs text-slate-400">Order details are saved to backend!</p>
+              <p className="text-[11px] text-slate-400">Status auto-syncs with backend every 5s</p>
             </div>
 
             {/* Stepper Progress */}
@@ -398,7 +444,7 @@
                 { step: 4, label: 'Delivered', desc: 'Food delivered successfully' },
               ].map(s => (
                 <div key={s.step} className="flex gap-4 items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs text-white ${activeOrder.statusStep >= s.step ? 'bg-emerald-600' : 'bg-slate-200 text-slate-400'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs text-white ${activeOrder.statusStep >= s.step ? 'bg-emerald-600 font-extrabold' : 'bg-slate-200 text-slate-400'}`}>
                     {s.step}
                   </div>
                   <div>
@@ -411,10 +457,14 @@
 
             <div className="border-t pt-4 text-xs text-slate-600 space-y-1">
               <p><strong>Customer:</strong> {activeOrder.name} ({activeOrder.mobile})</p>
-              <p><strong>Items:</strong> {activeOrder.items.join(', ')}</p>
+              <p><strong>Items:</strong> {Array.isArray(activeOrder.items) ? activeOrder.items.join(', ') : activeOrder.items}</p>
               <p><strong>Address:</strong> {activeOrder.address}</p>
               <p><strong>Total Paid:</strong> ₹{activeOrder.totalAmount}</p>
             </div>
+
+            <button onClick={() => setCustomerTab('home')} className="w-full py-2.5 bg-slate-100 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-200">
+              ← Back to Main Menu
+            </button>
           </div>
         </div>
       );
