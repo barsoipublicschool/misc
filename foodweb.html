@@ -4,205 +4,442 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FoodExpress - Order Food Online</title>
+  
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              primary: '#059669',
+              accent: '#F97316',
+              dark: '#0F172A',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React & ReactDOM CDN -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800">
+<body class="bg-slate-50 text-slate-800 antialiased selection:bg-emerald-500 selection:text-white">
 
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    const { useState, useEffect, createContext, useContext } = React;
 
-    // Paste your Web App URL here
+    // Direct Web App URL Provided
     const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbxDnnSaiaeemj_Xx1xRRJzmkXVG-35J6yXwLzGAb284qtSJy_UusVjtDKcaG59M0yfH/exec";
 
-    const DEFAULT_PRODUCTS = [
-      { id: 'p1', name: 'Margherita Pizza', price: 249, category: 'Pizza', isVeg: true, image: 'https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?w=600&q=80', desc: 'Classic mozzarella cheese pizza.' },
-      { id: 'p2', name: 'Special Chicken Biryani', price: 299, category: 'Biryani', isVeg: false, image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&q=80', desc: 'Aromatic basmati rice cooked with chicken.' },
-      { id: 'p3', name: 'Cheese Burst Burger', price: 149, category: 'Burger', isVeg: true, image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&q=80', desc: 'Loaded patty with melted cheese.' }
+    const INITIAL_CATEGORIES = ['All', 'Pizza', 'Burger', 'Biryani', 'Chinese', 'Desserts'];
+
+    const INITIAL_RESTAURANTS = [
+      { id: 'r1', name: 'Pizza Hub', rating: 4.8, timing: '10:00 AM - 11:00 PM', image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=600&q=80', tags: 'Pizza, Fast Food' },
+      { id: 'r2', name: 'Biryani House', rating: 4.7, timing: '11:00 AM - 10:30 PM', image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&q=80', tags: 'Biryani, Mughlai' },
+      { id: 'r3', name: 'Burger Point', rating: 4.5, timing: '09:00 AM - 12:00 AM', image: 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=600&q=80', tags: 'Burgers, Snacks' }
     ];
 
-    const App = () => {
-      const [currentView, setCurrentView] = useState('home'); // 'home', 'cart', 'tracking'
-      const [products, setProducts] = useState(DEFAULT_PRODUCTS);
+    const INITIAL_PRODUCTS = [
+      { id: 'p1', name: 'Margherita Pizza', price: 249, category: 'Pizza', isVeg: true, image: 'https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?w=600&q=80', desc: 'Classic mozzarella cheese pizza loaded with basil.' },
+      { id: 'p2', name: 'Special Chicken Biryani', price: 299, category: 'Biryani', isVeg: false, image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&q=80', desc: 'Aromatic basmati rice cooked with chicken.' },
+      { id: 'p3', name: 'Cheese Burst Burger', price: 149, category: 'Burger', isVeg: true, image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&q=80', desc: 'Loaded patty with melted cheddar cheese.' }
+    ];
+
+    const AppContext = createContext();
+
+    const AppProvider = ({ children }) => {
+      const [customerTab, setCustomerTab] = useState('home'); // 'home', 'cart', 'my-orders', 'tracking'
+      const [selectedRest, setSelectedRest] = useState(null);
+      const [searchQuery, setSearchQuery] = useState('');
+      const [selectedCategory, setSelectedCategory] = useState('All');
+      
+      const [products] = useState(INITIAL_PRODUCTS);
+      const [restaurants] = useState(INITIAL_RESTAURANTS);
       const [cart, setCart] = useState([]);
       const [activeOrder, setActiveOrder] = useState(null);
-      const [isCheckout, setIsCheckout] = useState(false);
-      const [form, setForm] = useState({ name: '', mobile: '', address: '', paymentMethod: 'COD' });
+      const [couponCode, setCouponCode] = useState('');
+      const [discountPercent, setDiscountPercent] = useState(0);
 
       const addToCart = (product) => {
         setCart(prev => {
-          const ex = prev.find(i => i.product.id === product.id);
-          if (ex) return prev.map(i => i.product.id === product.id ? { ...i, qty: i.qty + 1 } : i);
+          const exists = prev.find(i => i.product.id === product.id);
+          if (exists) return prev.map(i => i.product.id === product.id ? { ...i, qty: i.qty + 1 } : i);
           return [...prev, { product, qty: 1 }];
         });
       };
 
-      const updateQty = (id, d) => {
-        setCart(prev => prev.map(i => i.product.id === id ? { ...i, qty: i.qty + d } : i).filter(i => i.qty > 0));
+      const updateCartQty = (id, delta) => {
+        setCart(prev => prev.map(item => {
+          if (item.product.id === id) {
+            const newQty = item.qty + delta;
+            return newQty > 0 ? { ...item, qty: newQty } : null;
+          }
+          return item;
+        }).filter(Boolean));
       };
 
-      const totalAmount = cart.reduce((s, i) => s + (i.product.price * i.qty), 0) + (cart.length > 0 ? 30 : 0);
+      const applyCoupon = () => {
+        if (couponCode.toUpperCase() === 'FOOD50') {
+          setDiscountPercent(20);
+          alert('Coupon Applied: 20% Discount!');
+        } else {
+          alert('Invalid Coupon Code. Try FOOD50');
+        }
+      };
 
-      const handlePlaceOrder = (e) => {
-        e.preventDefault();
+      const subtotal = cart.reduce((acc, i) => acc + (i.product.price * i.qty), 0);
+      const discountAmount = (subtotal * discountPercent) / 100;
+      const grandTotal = subtotal - discountAmount + (cart.length > 0 ? 30 : 0);
+
+      const placeOrder = (orderDetails) => {
         const orderId = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
         const payload = {
           action: "ADD_ORDER",
           orderId,
-          ...form,
-          items: cart.map(c => `${c.product.name} (x${c.qty})`),
-          totalAmount
+          name: orderDetails.name,
+          mobile: orderDetails.mobile,
+          address: orderDetails.address,
+          paymentMethod: orderDetails.payment,
+          items: cart.map(i => `${i.product.name} (x${i.qty})`),
+          totalAmount: grandTotal,
+          date: new Date().toISOString().split('T')[0]
         };
 
-        // Send to Google Sheet
-        if (GOOGLE_SHEET_URL && !GOOGLE_SHEET_URL.includes("YOUR_GOOGLE")) {
-          fetch(GOOGLE_SHEET_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-        }
+        // Post Data to Google Sheet
+        fetch(GOOGLE_SHEET_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).catch(err => console.error('Sheet update failed', err));
 
-        setActiveOrder({ ...payload, statusStep: 1 }); // Step 1: Order Placed
+        setActiveOrder({ ...payload, statusStep: 1 });
         setCart([]);
-        setIsCheckout(false);
-        setCurrentView('tracking');
+        setCustomerTab('tracking');
       };
 
       return (
-        <div className="min-h-screen flex flex-col">
-          {/* Pure Customer Header */}
-          <header className="bg-white border-b sticky top-0 z-40 p-4">
-            <div className="max-w-6xl mx-auto flex justify-between items-center">
-              <h1 onClick={() => setCurrentView('home')} className="text-xl font-extrabold text-emerald-600 cursor-pointer">FoodExpress</h1>
-              <div className="flex gap-4 items-center">
-                {activeOrder && (
-                  <button onClick={() => setCurrentView('tracking')} className="text-xs font-bold text-orange-600 bg-orange-50 px-3 py-1.5 rounded-xl">📍 Track Order</button>
-                )}
-                <button onClick={() => setCurrentView('cart')} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold">
-                  🛒 Cart ({cart.reduce((s, i) => s + i.qty, 0)})
-                </button>
-              </div>
-            </div>
-          </header>
+        <AppContext.Provider value={{
+          customerTab, setCustomerTab, selectedRest, setSelectedRest,
+          searchQuery, setSearchQuery, selectedCategory, setSelectedCategory,
+          products, restaurants, activeOrder,
+          cart, addToCart, updateCartQty, applyCoupon, couponCode, setCouponCode,
+          subtotal, discountAmount, grandTotal, placeOrder
+        }}>
+          {children}
+        </AppContext.Provider>
+      );
+    };
 
-          <main className="flex-1 max-w-6xl mx-auto p-4 w-full">
-            {/* HOME VIEW */}
-            {currentView === 'home' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 py-4">
-                {products.map(p => (
-                  <div key={p.id} className="bg-white border rounded-2xl p-4 space-y-3">
-                    <img src={p.image} className="w-full h-40 object-cover rounded-xl" />
-                    <h3 className="font-bold text-sm text-slate-900">{p.name}</h3>
-                    <p className="text-xs text-slate-500">{p.desc}</p>
-                    <div className="flex justify-between items-center pt-2">
-                      <span className="font-extrabold text-sm">₹{p.price}</span>
-                      <button onClick={() => addToCart(p)} className="bg-emerald-600 text-white px-3 py-1.5 text-xs font-bold rounded-xl">+ Add</button>
+    const useApp = () => useContext(AppContext);
+
+    // Customer Header (Hidden Admin & Restaurant buttons)
+    const CustomerHeader = () => {
+      const { setCustomerTab, cart, activeOrder, searchQuery, setSearchQuery } = useApp();
+      const totalCartQty = cart.reduce((sum, item) => sum + item.qty, 0);
+
+      return (
+        <header className="sticky top-0 bg-white border-b border-slate-200 z-40 shadow-xs">
+          <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
+            
+            {/* Logo */}
+            <div onClick={() => setCustomerTab('home')} className="flex items-center gap-2 cursor-pointer">
+              <div className="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-extrabold text-lg">F</div>
+              <span className="font-extrabold text-slate-900 text-xl tracking-tight">Food<span className="text-emerald-600">Express</span></span>
+            </div>
+
+            {/* Search Bar */}
+            <div className="flex-1 max-w-md hidden sm:block">
+              <input 
+                type="text" 
+                placeholder="Search food or restaurant..." 
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full bg-slate-100 border-none rounded-xl px-4 py-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 outline-none"
+              />
+            </div>
+
+            {/* Header Actions */}
+            <div className="flex items-center gap-3">
+              {activeOrder && (
+                <button onClick={() => setCustomerTab('tracking')} className="text-xs font-bold text-orange-600 bg-orange-50 px-3 py-2 rounded-xl flex items-center gap-1">
+                  📍 Live Track
+                </button>
+              )}
+
+              <button onClick={() => setCustomerTab('cart')} className="relative bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm hover:bg-emerald-700">
+                <span>🛒 Cart</span>
+                {totalCartQty > 0 && (
+                  <span className="bg-orange-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black">{totalCartQty}</span>
+                )}
+              </button>
+            </div>
+
+          </div>
+        </header>
+      );
+    };
+
+    const CustomerHome = () => {
+      const { restaurants, products, setSelectedRest, setCustomerTab, selectedCategory, setSelectedCategory, addToCart, searchQuery } = useApp();
+
+      const filteredProducts = products.filter(p => {
+        const matchesCat = selectedCategory === 'All' || p.category === selectedCategory;
+        const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesCat && matchesSearch;
+      });
+
+      return (
+        <div className="max-w-7xl mx-auto px-4 py-6 space-y-8">
+          
+          {/* Hero Banner */}
+          <div className="bg-gradient-to-r from-emerald-700 to-teal-800 rounded-3xl p-6 sm:p-10 text-white relative overflow-hidden flex flex-col justify-center min-h-[200px]">
+            <div className="relative z-10 max-w-lg space-y-2">
+              <span className="bg-orange-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">Fast Delivery</span>
+              <h2 className="text-2xl sm:text-4xl font-black leading-tight">Delicious Food, Delivered To Your Doorstep.</h2>
+              <p className="text-emerald-100 text-xs sm:text-sm font-medium">Order from top rated restaurants near you.</p>
+            </div>
+          </div>
+
+          {/* Categories */}
+          <div className="space-y-3">
+            <h3 className="font-extrabold text-slate-900 text-lg">Popular Categories</h3>
+            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+              {INITIAL_CATEGORIES.map(cat => (
+                <button 
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-5 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all ${selectedCategory === cat ? 'bg-emerald-600 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Top Restaurants */}
+          <div className="space-y-4">
+            <h3 className="font-extrabold text-slate-900 text-lg">Featured Restaurants</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {restaurants.map(r => (
+                <div 
+                  key={r.id} 
+                  onClick={() => { setSelectedRest(r); setCustomerTab('home'); }}
+                  className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg transition cursor-pointer group"
+                >
+                  <div className="h-40 overflow-hidden relative">
+                    <img src={r.image} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
+                    <span className="absolute top-3 right-3 bg-white/90 backdrop-blur-xs text-slate-900 text-xs font-bold px-2 py-1 rounded-lg">⭐ {r.rating}</span>
+                  </div>
+                  <div className="p-4 space-y-1">
+                    <h4 className="font-bold text-slate-900 text-base">{r.name}</h4>
+                    <p className="text-xs text-slate-500">{r.tags}</p>
+                    <p className="text-[11px] font-semibold text-emerald-600">🕒 {r.timing}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Food Items Grid */}
+          <div className="space-y-4">
+            <h3 className="font-extrabold text-slate-900 text-lg">Trending Dishes</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredProducts.map(p => (
+                <div key={p.id} className="bg-white rounded-2xl border border-slate-200 p-4 flex gap-4 items-center hover:shadow-md transition">
+                  <img src={p.image} className="w-24 h-24 rounded-xl object-cover" />
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-3 h-3 rounded-full ${p.isVeg ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
+                      <h4 className="font-bold text-slate-900 text-sm">{p.name}</h4>
+                    </div>
+                    <p className="text-xs text-slate-500 line-clamp-1">{p.desc}</p>
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="font-extrabold text-slate-900 text-sm">₹{p.price}</span>
+                      <button onClick={() => addToCart(p)} className="bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-emerald-700">+ Add</button>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-
-            {/* CART VIEW */}
-            {currentView === 'cart' && (
-              <div className="max-w-lg mx-auto py-6 space-y-4">
-                <h2 className="font-extrabold text-lg">Your Cart</h2>
-                {cart.length === 0 ? <p className="text-xs text-slate-500">Cart is empty.</p> : (
-                  <>
-                    <div className="bg-white border rounded-2xl divide-y">
-                      {cart.map(({ product, qty }) => (
-                        <div key={product.id} className="p-4 flex justify-between items-center text-xs">
-                          <div>
-                            <p className="font-bold">{product.name}</p>
-                            <p className="text-slate-500">₹{product.price} x {qty}</p>
-                          </div>
-                          <div className="flex gap-2 items-center bg-slate-100 px-2 py-1 rounded-lg font-bold">
-                            <button onClick={() => updateQty(product.id, -1)}>-</button>
-                            <span>{qty}</span>
-                            <button onClick={() => updateQty(product.id, 1)}>+</button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <button onClick={() => setIsCheckout(true)} className="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl text-xs">Proceed to Checkout (₹{totalAmount})</button>
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* LIVE TRACKING VIEW */}
-            {currentView === 'tracking' && activeOrder && (
-              <div className="max-w-md mx-auto py-8 bg-white border rounded-2xl p-6 space-y-6">
-                <div className="text-center">
-                  <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">Order ID: {activeOrder.orderId}</span>
-                  <h3 className="font-extrabold text-lg text-slate-900 mt-2">Live Order Status</h3>
                 </div>
-
-                {/* Progress Tracker Stepper */}
-                <div className="space-y-4 text-xs font-bold">
-                  {[
-                    { step: 1, label: 'Order Placed', desc: 'We have received your order' },
-                    { step: 2, label: 'Preparing', desc: 'Restaurant is preparing your food' },
-                    { step: 3, label: 'On the Way', desc: 'Delivery partner is on the way' },
-                    { step: 4, label: 'Delivered', desc: 'Food delivered successfully' },
-                  ].map(s => (
-                    <div key={s.step} className="flex gap-4 items-center">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs text-white ${activeOrder.statusStep >= s.step ? 'bg-emerald-600' : 'bg-slate-200 text-slate-400'}`}>
-                        {s.step}
-                      </div>
-                      <div>
-                        <p className={activeOrder.statusStep >= s.step ? 'text-slate-900 font-bold' : 'text-slate-400'}>{s.label}</p>
-                        <p className="text-[10px] text-slate-400 font-normal">{s.desc}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="border-t pt-4 text-xs text-slate-600 space-y-1">
-                  <p><strong>Deliver To:</strong> {activeOrder.name} ({activeOrder.mobile})</p>
-                  <p><strong>Address:</strong> {activeOrder.address}</p>
-                  <p><strong>Payment:</strong> {activeOrder.paymentMethod}</p>
-                </div>
-              </div>
-            )}
-          </main>
-
-          {/* Checkout Modal */}
-          {isCheckout && (
-            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4">
-                <div className="flex justify-between items-center border-b pb-2">
-                  <h3 className="font-bold text-sm">Delivery & Address Details</h3>
-                  <button onClick={() => setIsCheckout(false)}>✕</button>
-                </div>
-                <form onSubmit={handlePlaceOrder} className="space-y-3 text-xs">
-                  <input required placeholder="Full Name" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full border p-2.5 rounded-xl" />
-                  <input required placeholder="Mobile Number" value={form.mobile} onChange={e => setForm({...form, mobile: e.target.value})} className="w-full border p-2.5 rounded-xl" />
-                  <textarea required placeholder="Delivery Address" value={form.address} onChange={e => setForm({...form, address: e.target.value})} className="w-full border p-2.5 rounded-xl" rows="2"></textarea>
-                  <select value={form.paymentMethod} onChange={e => setForm({...form, paymentMethod: e.target.value})} className="w-full border p-2.5 rounded-xl font-bold">
-                    <option value="COD">Cash on Delivery (COD)</option>
-                    <option value="UPI">Online UPI / Payment</option>
-                  </select>
-                  <button type="submit" className="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl">Confirm & Place Order</button>
-                </form>
-              </div>
+              ))}
             </div>
-          )}
+          </div>
+
         </div>
       );
     };
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    const CartAndCheckout = () => {
+      const { cart, updateCartQty, applyCoupon, couponCode, setCouponCode, subtotal, discountAmount, grandTotal, placeOrder } = useApp();
+      const [checkoutForm, setCheckoutForm] = useState({ name: '', mobile: '', address: '', payment: 'COD' });
+
+      if (cart.length === 0) {
+        return (
+          <div className="max-w-md mx-auto py-16 text-center space-y-4">
+            <div className="text-5xl">🛒</div>
+            <h3 className="font-bold text-lg text-slate-900">Your Cart is Empty</h3>
+            <p className="text-xs text-slate-500">Add delicious food items to place an order.</p>
+          </div>
+        );
+      }
+
+      return (
+        <div className="max-w-5xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* Cart Items List */}
+          <div className="lg:col-span-2 space-y-4">
+            <h3 className="font-extrabold text-lg text-slate-900">Order Summary</h3>
+            <div className="bg-white rounded-2xl border border-slate-200 divide-y">
+              {cart.map(({ product, qty }) => (
+                <div key={product.id} className="p-4 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <img src={product.image} className="w-14 h-14 rounded-xl object-cover" />
+                    <div>
+                      <h4 className="font-bold text-xs text-slate-900">{product.name}</h4>
+                      <p className="text-xs font-semibold text-slate-500">₹{product.price}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 bg-slate-100 px-3 py-1.5 rounded-xl">
+                    <button onClick={() => updateCartQty(product.id, -1)} className="font-bold text-slate-600">-</button>
+                    <span className="text-xs font-bold">{qty}</span>
+                    <button onClick={() => updateCartQty(product.id, 1)} className="font-bold text-slate-600">+</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Coupon Code Input */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 flex gap-2">
+              <input 
+                type="text" 
+                placeholder="Coupon Code (e.g. FOOD50)" 
+                value={couponCode}
+                onChange={e => setCouponCode(e.target.value)}
+                className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold uppercase"
+              />
+              <button onClick={applyCoupon} className="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold">Apply</button>
+            </div>
+          </div>
+
+          {/* Checkout Form */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 space-y-4 h-fit shadow-xs">
+            <h3 className="font-bold text-slate-900 text-sm border-b pb-2">Delivery Details</h3>
+            
+            <form onSubmit={(e) => { e.preventDefault(); placeOrder(checkoutForm); }} className="space-y-3 text-xs">
+              <div>
+                <label className="font-bold text-slate-700">Full Name</label>
+                <input required type="text" value={checkoutForm.name} onChange={e => setCheckoutForm({...checkoutForm, name: e.target.value})} className="w-full border p-2.5 rounded-xl mt-1 font-medium" placeholder="Name" />
+              </div>
+              <div>
+                <label className="font-bold text-slate-700">Mobile Number</label>
+                <input required type="tel" value={checkoutForm.mobile} onChange={e => setCheckoutForm({...checkoutForm, mobile: e.target.value})} className="w-full border p-2.5 rounded-xl mt-1 font-medium" placeholder="9876543210" />
+              </div>
+              <div>
+                <label className="font-bold text-slate-700">Delivery Address</label>
+                <textarea required value={checkoutForm.address} onChange={e => setCheckoutForm({...checkoutForm, address: e.target.value})} className="w-full border p-2.5 rounded-xl mt-1 font-medium" rows="2" placeholder="Full Address"></textarea>
+              </div>
+              <div>
+                <label className="font-bold text-slate-700">Payment Option</label>
+                <select value={checkoutForm.payment} onChange={e => setCheckoutForm({...checkoutForm, payment: e.target.value})} className="w-full border p-2.5 rounded-xl mt-1 font-bold bg-white">
+                  <option value="COD">Cash on Delivery (COD)</option>
+                  <option value="UPI">Online Payment / UPI</option>
+                </select>
+              </div>
+
+              {/* Bill Details */}
+              <div className="border-t pt-3 space-y-1.5 text-xs text-slate-600">
+                <div className="flex justify-between"><span>Subtotal</span><span>₹{subtotal}</span></div>
+                <div className="flex justify-between text-emerald-600"><span>Discount</span><span>-₹{discountAmount}</span></div>
+                <div className="flex justify-between"><span>Delivery Fee</span><span>₹30</span></div>
+                <div className="flex justify-between font-extrabold text-slate-900 text-sm border-t pt-2"><span>Total</span><span>₹{grandTotal}</span></div>
+              </div>
+
+              <button type="submit" className="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl text-xs hover:bg-emerald-700 shadow-sm">Place Order (₹{grandTotal})</button>
+            </form>
+          </div>
+
+        </div>
+      );
+    };
+
+    const LiveTrackingView = () => {
+      const { activeOrder } = useApp();
+
+      if (!activeOrder) return null;
+
+      return (
+        <div className="max-w-md mx-auto py-8 px-4">
+          <div className="bg-white border rounded-2xl p-6 space-y-6 shadow-sm">
+            <div className="text-center space-y-1">
+              <span className="text-[11px] font-extrabold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">{activeOrder.orderId}</span>
+              <h3 className="font-extrabold text-lg text-slate-900">Live Order Tracking</h3>
+              <p className="text-xs text-slate-400">Order details are saved to backend!</p>
+            </div>
+
+            {/* Stepper Progress */}
+            <div className="space-y-4 text-xs font-bold pt-2">
+              {[
+                { step: 1, label: 'Order Placed', desc: 'Received and saved to system' },
+                { step: 2, label: 'Preparing', desc: 'Kitchen is preparing your order' },
+                { step: 3, label: 'On the Way', desc: 'Rider is carrying your food' },
+                { step: 4, label: 'Delivered', desc: 'Food delivered successfully' },
+              ].map(s => (
+                <div key={s.step} className="flex gap-4 items-center">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs text-white ${activeOrder.statusStep >= s.step ? 'bg-emerald-600' : 'bg-slate-200 text-slate-400'}`}>
+                    {s.step}
+                  </div>
+                  <div>
+                    <p className={activeOrder.statusStep >= s.step ? 'text-slate-900 font-bold' : 'text-slate-400'}>{s.label}</p>
+                    <p className="text-[10px] text-slate-400 font-normal">{s.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t pt-4 text-xs text-slate-600 space-y-1">
+              <p><strong>Customer:</strong> {activeOrder.name} ({activeOrder.mobile})</p>
+              <p><strong>Items:</strong> {activeOrder.items.join(', ')}</p>
+              <p><strong>Address:</strong> {activeOrder.address}</p>
+              <p><strong>Total Paid:</strong> ₹{activeOrder.totalAmount}</p>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const MainApp = () => {
+      const { customerTab } = useApp();
+
+      return (
+        <div className="min-h-screen flex flex-col">
+          <CustomerHeader />
+          <main className="flex-1">
+            {customerTab === 'home' && <CustomerHome />}
+            {customerTab === 'cart' && <CartAndCheckout />}
+            {customerTab === 'tracking' && <LiveTrackingView />}
+          </main>
+        </div>
+      );
+    };
+
+    ReactDOM.createRoot(document.getElementById('root')).render(
+      <AppProvider>
+        <MainApp />
+      </AppProvider>
+    );
   </script>
 </body>
 </html>
