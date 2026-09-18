@@ -3,587 +3,206 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FoodExpress - Modern Food Delivery Platform</title>
-  
-  <!-- Tailwind CSS CDN -->
+  <title>FoodExpress - Order Food Online</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              primary: '#059669', // Emerald Green
-              accent: '#F97316',  // Vivid Orange
-              dark: '#0F172A',
-            }
-          }
-        }
-      }
-    }
-  </script>
-
-  <!-- React & ReactDOM CDN -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased selection:bg-emerald-500 selection:text-white">
+<body class="bg-slate-50 text-slate-800">
 
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, createContext, useContext } = React;
+    const { useState, useEffect } = React;
 
-    // Default Data State
-    const INITIAL_CATEGORIES = ['All', 'Pizza', 'Burger', 'Biryani', 'Chinese', 'Desserts'];
+    // Paste your Web App URL here
+    const GOOGLE_SHEET_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL";
 
-    const INITIAL_RESTAURANTS = [
-      { id: 'r1', name: 'Pizza Hub', rating: 4.8, timing: '10:00 AM - 11:00 PM', image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=600&q=80', tags: 'Pizza, Fast Food', isApproved: true },
-      { id: 'r2', name: 'Biryani House', rating: 4.7, timing: '11:00 AM - 10:30 PM', image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&q=80', tags: 'Biryani, Mughlai', isApproved: true },
-      { id: 'r3', name: 'Burger Point', rating: 4.5, timing: '09:00 AM - 12:00 AM', image: 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=600&q=80', tags: 'Burgers, Snacks', isApproved: true }
+    const DEFAULT_PRODUCTS = [
+      { id: 'p1', name: 'Margherita Pizza', price: 249, category: 'Pizza', isVeg: true, image: 'https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?w=600&q=80', desc: 'Classic mozzarella cheese pizza.' },
+      { id: 'p2', name: 'Special Chicken Biryani', price: 299, category: 'Biryani', isVeg: false, image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&q=80', desc: 'Aromatic basmati rice cooked with chicken.' },
+      { id: 'p3', name: 'Cheese Burst Burger', price: 149, category: 'Burger', isVeg: true, image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&q=80', desc: 'Loaded patty with melted cheese.' }
     ];
 
-    const INITIAL_PRODUCTS = [
-      { id: 'p1', restId: 'r1', name: 'Margherita Pizza', price: 249, discount: 10, isVeg: true, category: 'Pizza', image: 'https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?w=600&q=80', desc: 'Classic cheese and basil loaded delight.', available: true },
-      { id: 'p2', restId: 'r2', name: 'Special Chicken Biryani', price: 299, discount: 15, isVeg: false, category: 'Biryani', image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&q=80', desc: 'Aromatic basmati rice cooked with succulent chicken.', available: true },
-      { id: 'p3', restId: 'r3', name: 'Cheese Burst Burger', price: 149, discount: 5, isVeg: true, category: 'Burger', image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&q=80', desc: 'Loaded patty with melted cheddar cheese.', available: true }
-    ];
-
-    const INITIAL_ORDERS = [
-      { id: 'ORD-9021', customer: 'Riyaz Ahmad', items: ['Margherita Pizza (x2)'], total: 448, status: 'Preparing', address: 'Barsoi, Katihar, Bihar', payment: 'COD', date: '2026-09-18' }
-    ];
-
-    const AppContext = createContext();
-
-    const AppProvider = ({ children }) => {
-      const [view, setView] = useState('customer'); // 'customer', 'restaurant', 'admin'
-      const [customerTab, setCustomerTab] = useState('home'); // 'home', 'restaurant-detail', 'cart', 'my-orders', 'profile'
-      const [selectedRest, setSelectedRest] = useState(null);
-      const [searchQuery, setSearchQuery] = useState('');
-      const [selectedCategory, setSelectedCategory] = useState('All');
-      
-      const [products, setProducts] = useState(INITIAL_PRODUCTS);
-      const [restaurants, setRestaurants] = useState(INITIAL_RESTAURANTS);
-      const [orders, setOrders] = useState(INITIAL_ORDERS);
+    const App = () => {
+      const [currentView, setCurrentView] = useState('home'); // 'home', 'cart', 'tracking'
+      const [products, setProducts] = useState(DEFAULT_PRODUCTS);
       const [cart, setCart] = useState([]);
-      const [couponCode, setCouponCode] = useState('');
-      const [discountPercent, setDiscountPercent] = useState(0);
+      const [activeOrder, setActiveOrder] = useState(null);
+      const [isCheckout, setIsCheckout] = useState(false);
+      const [form, setForm] = useState({ name: '', mobile: '', address: '', paymentMethod: 'COD' });
 
-      // Cart Actions
       const addToCart = (product) => {
         setCart(prev => {
-          const exists = prev.find(i => i.product.id === product.id);
-          if (exists) return prev.map(i => i.product.id === product.id ? { ...i, qty: i.qty + 1 } : i);
+          const ex = prev.find(i => i.product.id === product.id);
+          if (ex) return prev.map(i => i.product.id === product.id ? { ...i, qty: i.qty + 1 } : i);
           return [...prev, { product, qty: 1 }];
         });
       };
 
-      const updateCartQty = (id, delta) => {
-        setCart(prev => prev.map(item => {
-          if (item.product.id === id) {
-            const newQty = item.qty + delta;
-            return newQty > 0 ? { ...item, qty: newQty } : null;
-          }
-          return item;
-        }).filter(Boolean));
+      const updateQty = (id, d) => {
+        setCart(prev => prev.map(i => i.product.id === id ? { ...i, qty: i.qty + d } : i).filter(i => i.qty > 0));
       };
 
-      const applyCoupon = () => {
-        if (couponCode.toUpperCase() === 'FOOD50') {
-          setDiscountPercent(20);
-          alert('Coupon Applied: 20% Discount!');
-        } else {
-          alert('Invalid Coupon Code. Try FOOD50');
-        }
-      };
+      const totalAmount = cart.reduce((s, i) => s + (i.product.price * i.qty), 0) + (cart.length > 0 ? 30 : 0);
 
-      const subtotal = cart.reduce((acc, i) => acc + (i.product.price * i.qty), 0);
-      const discountAmount = (subtotal * discountPercent) / 100;
-      const grandTotal = subtotal - discountAmount + (cart.length > 0 ? 30 : 0); // ₹30 delivery fee
-
-      const placeOrder = (orderDetails) => {
-        const newOrder = {
-          id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
-          customer: orderDetails.name,
-          items: cart.map(i => `${i.product.name} (x${i.qty})`),
-          total: grandTotal,
-          status: 'Accepted',
-          address: orderDetails.address,
-          payment: orderDetails.payment,
-          date: new Date().toISOString().split('T')[0]
-        };
-        setOrders([newOrder, ...orders]);
-        setCart([]);
-        setCustomerTab('my-orders');
-      };
-
-      return (
-        <AppContext.Provider value={{
-          view, setView, customerTab, setCustomerTab, selectedRest, setSelectedRest,
-          searchQuery, setSearchQuery, selectedCategory, setSelectedCategory,
-          products, setProducts, restaurants, setRestaurants, orders, setOrders,
-          cart, addToCart, updateCartQty, applyCoupon, couponCode, setCouponCode,
-          subtotal, discountAmount, grandTotal, placeOrder
-        }}>
-          {children}
-        </AppContext.Provider>
-      );
-    };
-
-    const useApp = () => useContext(AppContext);
-
-    // ==========================================
-    // CUSTOMER WEBSITE COMPONENTS
-    // ==========================================
-
-    const CustomerHeader = () => {
-      const { setView, customerTab, setCustomerTab, cart, searchQuery, setSearchQuery } = useApp();
-      const totalCartQty = cart.reduce((sum, item) => sum + item.qty, 0);
-
-      return (
-        <header className="sticky top-0 bg-white border-b border-slate-200 z-40">
-          <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
-            
-            {/* Logo */}
-            <div className="flex items-center gap-6">
-              <div onClick={() => setCustomerTab('home')} className="flex items-center gap-2 cursor-pointer">
-                <div className="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-extrabold text-lg">F</div>
-                <span className="font-extrabold text-slate-900 text-xl tracking-tight">Food<span className="text-emerald-600">Express</span></span>
-              </div>
-
-              {/* Navigation Selector */}
-              <div className="hidden md:flex items-center bg-slate-100 p-1 rounded-xl text-xs font-bold">
-                <button onClick={() => setView('customer')} className="px-3 py-1.5 rounded-lg bg-white shadow-xs text-emerald-600">Customer</button>
-                <button onClick={() => setView('restaurant')} className="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">Restaurant</button>
-                <button onClick={() => setView('admin')} className="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">Admin</button>
-              </div>
-            </div>
-
-            {/* Search Bar */}
-            <div className="flex-1 max-w-md hidden sm:block">
-              <input 
-                type="text" 
-                placeholder="Search food or restaurant..." 
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-100 border-none rounded-xl px-4 py-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 outline-none"
-              />
-            </div>
-
-            {/* Header Actions */}
-            <div className="flex items-center gap-3">
-              <button onClick={() => setCustomerTab('my-orders')} className="text-xs font-bold text-slate-700 hover:text-emerald-600 px-3 py-2">
-                My Orders
-              </button>
-              
-              <button onClick={() => setCustomerTab('cart')} className="relative bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm">
-                <span>🛒 Cart</span>
-                {totalCartQty > 0 && (
-                  <span className="bg-orange-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black">{totalCartQty}</span>
-                )}
-              </button>
-            </div>
-
-          </div>
-        </header>
-      );
-    };
-
-    const CustomerHome = () => {
-      const { restaurants, products, setSelectedRest, setCustomerTab, selectedCategory, setSelectedCategory, addToCart } = useApp();
-
-      return (
-        <div className="max-w-7xl mx-auto px-4 py-6 space-y-8">
-          
-          {/* Banner */}
-          <div className="bg-gradient-to-r from-emerald-700 to-teal-800 rounded-3xl p-6 sm:p-10 text-white relative overflow-hidden flex flex-col justify-center min-h-[200px]">
-            <div className="relative z-10 max-w-lg space-y-2">
-              <span className="bg-orange-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">Fast Delivery</span>
-              <h2 className="text-2xl sm:text-4xl font-black leading-tight">Delicious Food, Delivered To Your Doorstep.</h2>
-              <p className="text-emerald-100 text-xs sm:text-sm font-medium">Order from top rated restaurants near you.</p>
-            </div>
-          </div>
-
-          {/* Categories */}
-          <div className="space-y-3">
-            <h3 className="font-extrabold text-slate-900 text-lg">Popular Categories</h3>
-            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-              {INITIAL_CATEGORIES.map(cat => (
-                <button 
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-5 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all ${selectedCategory === cat ? 'bg-emerald-600 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Top Restaurants */}
-          <div className="space-y-4">
-            <h3 className="font-extrabold text-slate-900 text-lg">Featured Restaurants</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {restaurants.map(r => (
-                <div 
-                  key={r.id} 
-                  onClick={() => { setSelectedRest(r); setCustomerTab('restaurant-detail'); }}
-                  className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg transition cursor-pointer group"
-                >
-                  <div className="h-40 overflow-hidden relative">
-                    <img src={r.image} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
-                    <span className="absolute top-3 right-3 bg-white/90 backdrop-blur-xs text-slate-900 text-xs font-bold px-2 py-1 rounded-lg">⭐ {r.rating}</span>
-                  </div>
-                  <div className="p-4 space-y-1">
-                    <h4 className="font-bold text-slate-900 text-base">{r.name}</h4>
-                    <p className="text-xs text-slate-500">{r.tags}</p>
-                    <p className="text-[11px] font-semibold text-emerald-600">🕒 {r.timing}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Food Items Grid */}
-          <div className="space-y-4">
-            <h3 className="font-extrabold text-slate-900 text-lg">Trending Dishes</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {products.map(p => (
-                <div key={p.id} className="bg-white rounded-2xl border border-slate-200 p-4 flex gap-4 items-center">
-                  <img src={p.image} className="w-24 h-24 rounded-xl object-cover" />
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className={`w-3 h-3 rounded-full ${p.isVeg ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
-                      <h4 className="font-bold text-slate-900 text-sm">{p.name}</h4>
-                    </div>
-                    <p className="text-xs text-slate-500 line-clamp-1">{p.desc}</p>
-                    <div className="flex items-center justify-between pt-1">
-                      <span className="font-extrabold text-slate-900 text-sm">₹{p.price}</span>
-                      <button onClick={() => addToCart(p)} className="bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-emerald-700">+ Add</button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-        </div>
-      );
-    };
-
-    const CartAndCheckout = () => {
-      const { cart, updateCartQty, applyCoupon, couponCode, setCouponCode, subtotal, discountAmount, grandTotal, placeOrder } = useApp();
-      const [checkoutForm, setCheckoutForm] = useState({ name: '', mobile: '', address: '', payment: 'COD' });
-
-      if (cart.length === 0) {
-        return (
-          <div className="max-w-md mx-auto py-16 text-center space-y-4">
-            <div className="text-5xl">🛒</div>
-            <h3 className="font-bold text-lg text-slate-900">Your Cart is Empty</h3>
-            <p className="text-xs text-slate-500">Add delicious food items to place an order.</p>
-          </div>
-        );
-      }
-
-      return (
-        <div className="max-w-5xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* Cart Items */}
-          <div className="lg:col-span-2 space-y-4">
-            <h3 className="font-extrabold text-lg text-slate-900">Order Summary</h3>
-            <div className="bg-white rounded-2xl border border-slate-200 divide-y">
-              {cart.map(({ product, qty }) => (
-                <div key={product.id} className="p-4 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <img src={product.image} className="w-14 h-14 rounded-xl object-cover" />
-                    <div>
-                      <h4 className="font-bold text-xs text-slate-900">{product.name}</h4>
-                      <p className="text-xs font-semibold text-slate-500">₹{product.price}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 bg-slate-100 px-3 py-1.5 rounded-xl">
-                    <button onClick={() => updateCartQty(product.id, -1)} className="font-bold text-slate-600">-</button>
-                    <span className="text-xs font-bold">{qty}</span>
-                    <button onClick={() => updateCartQty(product.id, 1)} className="font-bold text-slate-600">+</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Coupon Code */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-4 flex gap-2">
-              <input 
-                type="text" 
-                placeholder="Coupon Code (e.g. FOOD50)" 
-                value={couponCode}
-                onChange={e => setCouponCode(e.target.value)}
-                className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold uppercase"
-              />
-              <button onClick={applyCoupon} className="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold">Apply</button>
-            </div>
-          </div>
-
-          {/* Checkout Details Form */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 space-y-4 h-fit">
-            <h3 className="font-bold text-slate-900 text-sm border-b pb-2">Delivery Details</h3>
-            
-            <form onSubmit={(e) => { e.preventDefault(); placeOrder(checkoutForm); }} className="space-y-3 text-xs">
-              <div>
-                <label className="font-bold text-slate-700">Full Name</label>
-                <input required type="text" value={checkoutForm.name} onChange={e => setCheckoutForm({...checkoutForm, name: e.target.value})} className="w-full border p-2.5 rounded-xl mt-1 font-medium" placeholder="Riyaz Ahmad" />
-              </div>
-              <div>
-                <label className="font-bold text-slate-700">Mobile Number</label>
-                <input required type="tel" value={checkoutForm.mobile} onChange={e => setCheckoutForm({...checkoutForm, mobile: e.target.value})} className="w-full border p-2.5 rounded-xl mt-1 font-medium" placeholder="9876543210" />
-              </div>
-              <div>
-                <label className="font-bold text-slate-700">Delivery Address</label>
-                <textarea required value={checkoutForm.address} onChange={e => setCheckoutForm({...checkoutForm, address: e.target.value})} className="w-full border p-2.5 rounded-xl mt-1 font-medium" rows="2" placeholder="House/Flat No, Landmark, City"></textarea>
-              </div>
-              <div>
-                <label className="font-bold text-slate-700">Payment Option</label>
-                <select value={checkoutForm.payment} onChange={e => setCheckoutForm({...checkoutForm, payment: e.target.value})} className="w-full border p-2.5 rounded-xl mt-1 font-bold bg-white">
-                  <option value="COD">Cash on Delivery (COD)</option>
-                  <option value="UPI">Online Payment / UPI</option>
-                </select>
-              </div>
-
-              {/* Bill Details */}
-              <div className="border-t pt-3 space-y-1.5 text-xs text-slate-600">
-                <div className="flex justify-between"><span>Subtotal</span><span>₹{subtotal}</span></div>
-                <div className="flex justify-between text-emerald-600"><span>Discount</span><span>-₹{discountAmount}</span></div>
-                <div className="flex justify-between"><span>Delivery Fee</span><span>₹30</span></div>
-                <div className="flex justify-between font-extrabold text-slate-900 text-sm border-t pt-2"><span>Total</span><span>₹{grandTotal}</span></div>
-              </div>
-
-              <button type="submit" className="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl text-xs hover:bg-emerald-700">Place Order (₹{grandTotal})</button>
-            </form>
-          </div>
-
-        </div>
-      );
-    };
-
-    const MyOrdersView = () => {
-      const { orders } = useApp();
-
-      return (
-        <div className="max-w-3xl mx-auto px-4 py-8 space-y-4">
-          <h3 className="font-extrabold text-lg text-slate-900">My Orders & Tracking</h3>
-          <div className="space-y-4">
-            {orders.map(o => (
-              <div key={o.id} className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
-                <div className="flex justify-between items-center border-b pb-3">
-                  <div>
-                    <span className="font-extrabold text-xs text-slate-900">{o.id}</span>
-                    <p className="text-[11px] text-slate-400">{o.date}</p>
-                  </div>
-                  <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-extrabold">{o.status}</span>
-                </div>
-                <div className="text-xs text-slate-700 space-y-1">
-                  <p><strong>Items:</strong> {o.items.join(', ')}</p>
-                  <p><strong>Address:</strong> {o.address}</p>
-                  <p><strong>Payment:</strong> {o.payment}</p>
-                  <p className="text-sm font-extrabold text-slate-900 pt-1">Total: ₹{o.total}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    };
-
-    // ==========================================
-    // RESTAURANT PANEL COMPONENT
-    // ==========================================
-
-    const RestaurantPanel = () => {
-      const { products, setProducts, orders, setOrders } = useApp();
-      const [newFood, setNewFood] = useState({ name: '', price: '', category: 'Pizza', isVeg: true });
-
-      const handleAddFood = (e) => {
+      const handlePlaceOrder = (e) => {
         e.preventDefault();
-        const item = {
-          id: 'p' + Date.now(),
-          restId: 'r1',
-          name: newFood.name,
-          price: Number(newFood.price),
-          discount: 0,
-          isVeg: newFood.isVeg,
-          category: newFood.category,
-          image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80',
-          desc: 'Freshly prepared item',
-          available: true
+        const orderId = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
+        const payload = {
+          action: "ADD_ORDER",
+          orderId,
+          ...form,
+          items: cart.map(c => `${c.product.name} (x${c.qty})`),
+          totalAmount
         };
-        setProducts([...products, item]);
-        setNewFood({ name: '', price: '', category: 'Pizza', isVeg: true });
-        alert('Food Item Added Successfully!');
+
+        // Send to Google Sheet
+        if (GOOGLE_SHEET_URL && !GOOGLE_SHEET_URL.includes("YOUR_GOOGLE")) {
+          fetch(GOOGLE_SHEET_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        }
+
+        setActiveOrder({ ...payload, statusStep: 1 }); // Step 1: Order Placed
+        setCart([]);
+        setIsCheckout(false);
+        setCurrentView('tracking');
       };
-
-      const updateOrderStatus = (orderId, newStatus) => {
-        setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-      };
-
-      return (
-        <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-          <div className="bg-slate-900 text-white rounded-2xl p-6 flex justify-between items-center">
-            <div>
-              <h2 className="text-xl font-bold">Pizza Hub - Manager Portal</h2>
-              <p className="text-xs text-slate-400">Manage Menu Items, Orders, and Availability</p>
-            </div>
-            <span className="bg-emerald-500 text-white px-3 py-1 rounded-full text-xs font-bold">Store Open</span>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Add Food Item */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 space-y-4">
-              <h3 className="font-bold text-sm text-slate-900">Add New Food Item</h3>
-              <form onSubmit={handleAddFood} className="space-y-3 text-xs">
-                <div>
-                  <label className="font-bold">Item Name</label>
-                  <input required type="text" value={newFood.name} onChange={e => setNewFood({...newFood, name: e.target.value})} className="w-full border p-2.5 rounded-xl mt-1" />
-                </div>
-                <div>
-                  <label className="font-bold">Price (₹)</label>
-                  <input required type="number" value={newFood.price} onChange={e => setNewFood({...newFood, price: e.target.value})} className="w-full border p-2.5 rounded-xl mt-1" />
-                </div>
-                <div>
-                  <label className="font-bold">Category</label>
-                  <select value={newFood.category} onChange={e => setNewFood({...newFood, category: e.target.value})} className="w-full border p-2.5 rounded-xl mt-1 font-bold">
-                    {INITIAL_CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                <button type="submit" className="w-full py-2.5 bg-emerald-600 text-white font-bold rounded-xl">+ Add Item</button>
-              </form>
-            </div>
-
-            {/* Live Orders Management */}
-            <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 space-y-4">
-              <h3 className="font-bold text-sm text-slate-900">Incoming Orders</h3>
-              <div className="space-y-3">
-                {orders.map(o => (
-                  <div key={o.id} className="border p-4 rounded-xl flex justify-between items-center text-xs">
-                    <div>
-                      <p className="font-bold text-slate-900">{o.id} - {o.customer}</p>
-                      <p className="text-slate-500">{o.items.join(', ')}</p>
-                      <span className="font-bold text-emerald-600">₹{o.total}</span>
-                    </div>
-                    <div className="flex gap-2">
-                      {['Preparing', 'Out for Delivery', 'Delivered'].map(st => (
-                        <button key={st} onClick={() => updateOrderStatus(o.id, st)} className={`px-2.5 py-1 rounded-lg font-bold text-[10px] ${o.status === st ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
-                          {st}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    };
-
-    // ==========================================
-    // ADMIN PANEL COMPONENT
-    // ==========================================
-
-    const AdminPanel = () => {
-      const { restaurants, products, orders } = useApp();
-
-      return (
-        <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-black text-slate-900">Super Admin Dashboard</h2>
-            <span className="bg-slate-900 text-white px-3 py-1 rounded-full text-xs font-bold">System Online</span>
-          </div>
-
-          {/* Quick Metrics */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <div className="bg-white p-5 rounded-2xl border border-slate-200">
-              <p className="text-xs text-slate-500 font-bold">Total Orders</p>
-              <p className="text-2xl font-black text-slate-900">{orders.length}</p>
-            </div>
-            <div className="bg-white p-5 rounded-2xl border border-slate-200">
-              <p className="text-xs text-slate-500 font-bold">Restaurants</p>
-              <p className="text-2xl font-black text-slate-900">{restaurants.length}</p>
-            </div>
-            <div className="bg-white p-5 rounded-2xl border border-slate-200">
-              <p className="text-xs text-slate-500 font-bold">Total Products</p>
-              <p className="text-2xl font-black text-slate-900">{products.length}</p>
-            </div>
-            <div className="bg-white p-5 rounded-2xl border border-slate-200">
-              <p className="text-xs text-slate-500 font-bold">Platform Revenue</p>
-              <p className="text-2xl font-black text-emerald-600">₹14,250</p>
-            </div>
-          </div>
-
-          {/* Restaurant Approvals Table */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
-            <h3 className="font-bold text-sm text-slate-900">Restaurant Approvals & Status</h3>
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b bg-slate-50 text-slate-500">
-                  <th className="p-3">Restaurant</th>
-                  <th className="p-3">Rating</th>
-                  <th className="p-3">Timing</th>
-                  <th className="p-3">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {restaurants.map(r => (
-                  <tr key={r.id} className="border-b hover:bg-slate-50">
-                    <td className="p-3 font-bold">{r.name}</td>
-                    <td className="p-3">⭐ {r.rating}</td>
-                    <td className="p-3">{r.timing}</td>
-                    <td className="p-3"><span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-bold">Approved</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      );
-    };
-
-    // Main Master App Entry
-    const MainApp = () => {
-      const { view, customerTab } = useApp();
 
       return (
         <div className="min-h-screen flex flex-col">
-          <CustomerHeader />
+          {/* Pure Customer Header */}
+          <header className="bg-white border-b sticky top-0 z-40 p-4">
+            <div className="max-w-6xl mx-auto flex justify-between items-center">
+              <h1 onClick={() => setCurrentView('home')} className="text-xl font-extrabold text-emerald-600 cursor-pointer">FoodExpress</h1>
+              <div className="flex gap-4 items-center">
+                {activeOrder && (
+                  <button onClick={() => setCurrentView('tracking')} className="text-xs font-bold text-orange-600 bg-orange-50 px-3 py-1.5 rounded-xl">📍 Track Order</button>
+                )}
+                <button onClick={() => setCurrentView('cart')} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold">
+                  🛒 Cart ({cart.reduce((s, i) => s + i.qty, 0)})
+                </button>
+              </div>
+            </div>
+          </header>
 
-          <main className="flex-1">
-            {view === 'customer' && (
-              <>
-                {customerTab === 'home' && <CustomerHome />}
-                {customerTab === 'cart' && <CartAndCheckout />}
-                {customerTab === 'my-orders' && <MyOrdersView />}
-              </>
+          <main className="flex-1 max-w-6xl mx-auto p-4 w-full">
+            {/* HOME VIEW */}
+            {currentView === 'home' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 py-4">
+                {products.map(p => (
+                  <div key={p.id} className="bg-white border rounded-2xl p-4 space-y-3">
+                    <img src={p.image} className="w-full h-40 object-cover rounded-xl" />
+                    <h3 className="font-bold text-sm text-slate-900">{p.name}</h3>
+                    <p className="text-xs text-slate-500">{p.desc}</p>
+                    <div className="flex justify-between items-center pt-2">
+                      <span className="font-extrabold text-sm">₹{p.price}</span>
+                      <button onClick={() => addToCart(p)} className="bg-emerald-600 text-white px-3 py-1.5 text-xs font-bold rounded-xl">+ Add</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
 
-            {view === 'restaurant' && <RestaurantPanel />}
-            {view === 'admin' && <AdminPanel />}
+            {/* CART VIEW */}
+            {currentView === 'cart' && (
+              <div className="max-w-lg mx-auto py-6 space-y-4">
+                <h2 className="font-extrabold text-lg">Your Cart</h2>
+                {cart.length === 0 ? <p className="text-xs text-slate-500">Cart is empty.</p> : (
+                  <>
+                    <div className="bg-white border rounded-2xl divide-y">
+                      {cart.map(({ product, qty }) => (
+                        <div key={product.id} className="p-4 flex justify-between items-center text-xs">
+                          <div>
+                            <p className="font-bold">{product.name}</p>
+                            <p className="text-slate-500">₹{product.price} x {qty}</p>
+                          </div>
+                          <div className="flex gap-2 items-center bg-slate-100 px-2 py-1 rounded-lg font-bold">
+                            <button onClick={() => updateQty(product.id, -1)}>-</button>
+                            <span>{qty}</span>
+                            <button onClick={() => updateQty(product.id, 1)}>+</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <button onClick={() => setIsCheckout(true)} className="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl text-xs">Proceed to Checkout (₹{totalAmount})</button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* LIVE TRACKING VIEW */}
+            {currentView === 'tracking' && activeOrder && (
+              <div className="max-w-md mx-auto py-8 bg-white border rounded-2xl p-6 space-y-6">
+                <div className="text-center">
+                  <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">Order ID: {activeOrder.orderId}</span>
+                  <h3 className="font-extrabold text-lg text-slate-900 mt-2">Live Order Status</h3>
+                </div>
+
+                {/* Progress Tracker Stepper */}
+                <div className="space-y-4 text-xs font-bold">
+                  {[
+                    { step: 1, label: 'Order Placed', desc: 'We have received your order' },
+                    { step: 2, label: 'Preparing', desc: 'Restaurant is preparing your food' },
+                    { step: 3, label: 'On the Way', desc: 'Delivery partner is on the way' },
+                    { step: 4, label: 'Delivered', desc: 'Food delivered successfully' },
+                  ].map(s => (
+                    <div key={s.step} className="flex gap-4 items-center">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs text-white ${activeOrder.statusStep >= s.step ? 'bg-emerald-600' : 'bg-slate-200 text-slate-400'}`}>
+                        {s.step}
+                      </div>
+                      <div>
+                        <p className={activeOrder.statusStep >= s.step ? 'text-slate-900 font-bold' : 'text-slate-400'}>{s.label}</p>
+                        <p className="text-[10px] text-slate-400 font-normal">{s.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="border-t pt-4 text-xs text-slate-600 space-y-1">
+                  <p><strong>Deliver To:</strong> {activeOrder.name} ({activeOrder.mobile})</p>
+                  <p><strong>Address:</strong> {activeOrder.address}</p>
+                  <p><strong>Payment:</strong> {activeOrder.paymentMethod}</p>
+                </div>
+              </div>
+            )}
           </main>
+
+          {/* Checkout Modal */}
+          {isCheckout && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4">
+                <div className="flex justify-between items-center border-b pb-2">
+                  <h3 className="font-bold text-sm">Delivery & Address Details</h3>
+                  <button onClick={() => setIsCheckout(false)}>✕</button>
+                </div>
+                <form onSubmit={handlePlaceOrder} className="space-y-3 text-xs">
+                  <input required placeholder="Full Name" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full border p-2.5 rounded-xl" />
+                  <input required placeholder="Mobile Number" value={form.mobile} onChange={e => setForm({...form, mobile: e.target.value})} className="w-full border p-2.5 rounded-xl" />
+                  <textarea required placeholder="Delivery Address" value={form.address} onChange={e => setForm({...form, address: e.target.value})} className="w-full border p-2.5 rounded-xl" rows="2"></textarea>
+                  <select value={form.paymentMethod} onChange={e => setForm({...form, paymentMethod: e.target.value})} className="w-full border p-2.5 rounded-xl font-bold">
+                    <option value="COD">Cash on Delivery (COD)</option>
+                    <option value="UPI">Online UPI / Payment</option>
+                  </select>
+                  <button type="submit" className="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl">Confirm & Place Order</button>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       );
     };
 
-    ReactDOM.createRoot(document.getElementById('root')).render(
-      <AppProvider>
-        <MainApp />
-      </AppProvider>
-    );
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
 </body>
 </html>
