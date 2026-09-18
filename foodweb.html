@@ -73,14 +73,7 @@
       const [couponCode, setCouponCode] = useState('');
       const [discountPercent, setDiscountPercent] = useState(0);
 
-      useEffect(() => {
-        const savedOrder = localStorage.getItem('foodexpress_active_order');
-        if (savedOrder) {
-          try { setActiveOrder(JSON.parse(savedOrder)); } catch (e) {}
-        }
-      }, []);
-
-      // Auto Status Sync
+      // Auto Status Sync if order is active
       useEffect(() => {
         if (!activeOrder || (!activeOrder.orderId && !activeOrder.mobile)) return;
 
@@ -97,7 +90,6 @@
 
                 const updated = { ...data, statusStep: step };
                 setActiveOrder(updated);
-                localStorage.setItem('foodexpress_active_order', JSON.stringify(updated));
               }
             })
             .catch(() => {});
@@ -118,11 +110,15 @@
 
               const orderData = { ...data, statusStep: step };
               setActiveOrder(orderData);
-              localStorage.setItem('foodexpress_active_order', JSON.stringify(orderData));
               return { success: true };
             } else {
-              return { success: false, message: data.message || "Order not found!" };
+              setActiveOrder(null);
+              return { success: false, message: "❌ Galat number ya koi active order nahi mila!" };
             }
+          })
+          .catch(() => {
+            setActiveOrder(null);
+            return { success: false, message: "❌ Server Error! Kripya dobara try karein." };
           });
       };
 
@@ -181,8 +177,6 @@
         }).catch(err => console.error('Sheet update failed', err));
 
         setActiveOrder(payload);
-        localStorage.setItem('foodexpress_active_order', JSON.stringify(payload));
-        
         setCart([]);
         setCustomerTab('tracking');
       };
@@ -191,7 +185,7 @@
         <AppContext.Provider value={{
           customerTab, setCustomerTab, selectedRest, setSelectedRest,
           searchQuery, setSearchQuery, selectedCategory, setSelectedCategory,
-          products, restaurants, activeOrder, fetchOrderByMobile,
+          products, restaurants, activeOrder, setActiveOrder, fetchOrderByMobile,
           cart, addToCart, updateCartQty, applyCoupon, couponCode, setCouponCode,
           subtotal, discountAmount, grandTotal, placeOrder
         }}>
@@ -425,14 +419,16 @@
       const handleSearch = (e) => {
         e.preventDefault();
         if (!inputMobile || inputMobile.length < 10) {
-          setErrorMsg('Please enter a valid 10-digit mobile number');
+          setErrorMsg('❌ Kripya sahi 10-digit mobile number enter karein!');
           return;
         }
         setLoading(true);
         setErrorMsg('');
         fetchOrderByMobile(inputMobile)
           .then(res => {
-            if (!res.success) setErrorMsg(res.message);
+            if (!res.success) {
+              setErrorMsg(res.message);
+            }
           })
           .finally(() => setLoading(false));
       };
@@ -455,10 +451,16 @@
                 {loading ? 'Searching...' : 'Search'}
               </button>
             </form>
-            {errorMsg && <p className="text-[11px] font-bold text-red-500">{errorMsg}</p>}
+
+            {/* Error Message Display */}
+            {errorMsg && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-center">
+                <p className="text-xs font-bold text-red-600">{errorMsg}</p>
+              </div>
+            )}
           </div>
 
-          {/* Active Order Stepper Card */}
+          {/* Active Order Stepper Card (Only visible if order found) */}
           {activeOrder ? (
             <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-6 shadow-sm">
               <div className="text-center space-y-1">
@@ -500,8 +502,8 @@
               </button>
             </div>
           ) : (
-            <div className="text-center py-8 text-xs text-slate-400">
-              Enter your mobile number above to fetch active order details.
+            <div className="text-center py-8 text-xs text-slate-400 font-medium">
+              Apna mobile number enter karke Search par click karein.
             </div>
           )}
 
