@@ -42,7 +42,7 @@
   <script type="text/babel">
     const { useState, useEffect, createContext, useContext } = React;
 
-    const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwlHyh3OFGrbaMDbuDEkdig0XntMwUmXPwhRhq_hkb-7_HqDJgCycuuAqT-b_AZ3D86/exec";
+    const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbzsmYuKSf8-dPeklu4W-d7HPlCnwmhHx5JuRDLxWien5jibU-lNkOHXzKVYu2hOKqYJ/exec";
 
     const INITIAL_CATEGORIES = ['All', 'Pizza', 'Burger', 'Biryani', 'Chinese', 'Desserts'];
 
@@ -69,55 +69,60 @@
       const [products] = useState(INITIAL_PRODUCTS);
       const [restaurants] = useState(INITIAL_RESTAURANTS);
       const [cart, setCart] = useState([]);
-      const [activeOrder, setActiveOrder] = useState(null);
+      const [activeOrdersList, setActiveOrdersList] = useState([]);
+      const [searchedMobile, setSearchedMobile] = useState('');
       const [couponCode, setCouponCode] = useState('');
       const [discountPercent, setDiscountPercent] = useState(0);
 
-      // Auto Status Sync if order is active
+      // Helper function to map status string to step number
+      const getStep = (statusStr) => {
+        if (statusStr === 'Preparing') return 2;
+        if (statusStr === 'On the Way') return 3;
+        if (statusStr === 'Delivered') return 4;
+        return 1;
+      };
+
+      // Auto Sync Statuses
       useEffect(() => {
-        if (!activeOrder || (!activeOrder.orderId && !activeOrder.mobile)) return;
+        if (!searchedMobile) return;
 
         const interval = setInterval(() => {
-          const queryParam = activeOrder.orderId ? `orderId=${activeOrder.orderId}` : `mobile=${activeOrder.mobile}`;
-          fetch(`${GOOGLE_SHEET_URL}?${queryParam}`)
+          fetch(`${GOOGLE_SHEET_URL}?mobile=${searchedMobile}`)
             .then(res => res.json())
             .then(data => {
-              if (data && data.success) {
-                let step = 1;
-                if (data.status === 'Preparing') step = 2;
-                if (data.status === 'On the Way') step = 3;
-                if (data.status === 'Delivered') step = 4;
-
-                const updated = { ...data, statusStep: step };
-                setActiveOrder(updated);
+              if (data && data.success && Array.isArray(data.orders)) {
+                const formatted = data.orders.map(o => ({
+                  ...o,
+                  statusStep: getStep(o.status)
+                }));
+                setActiveOrdersList(formatted);
               }
             })
             .catch(() => {});
         }, 5000);
 
         return () => clearInterval(interval);
-      }, [activeOrder]);
+      }, [searchedMobile]);
 
       const fetchOrderByMobile = (mobileNum) => {
+        setSearchedMobile(mobileNum);
         return fetch(`${GOOGLE_SHEET_URL}?mobile=${mobileNum}`)
           .then(res => res.json())
           .then(data => {
-            if (data && data.success) {
-              let step = 1;
-              if (data.status === 'Preparing') step = 2;
-              if (data.status === 'On the Way') step = 3;
-              if (data.status === 'Delivered') step = 4;
-
-              const orderData = { ...data, statusStep: step };
-              setActiveOrder(orderData);
+            if (data && data.success && Array.isArray(data.orders) && data.orders.length > 0) {
+              const formatted = data.orders.map(o => ({
+                ...o,
+                statusStep: getStep(o.status)
+              }));
+              setActiveOrdersList(formatted);
               return { success: true };
             } else {
-              setActiveOrder(null);
+              setActiveOrdersList([]);
               return { success: false, message: "❌ Galat number ya koi active order nahi mila!" };
             }
           })
           .catch(() => {
-            setActiveOrder(null);
+            setActiveOrdersList([]);
             return { success: false, message: "❌ Server Error! Kripya dobara try karein." };
           });
       };
@@ -176,7 +181,8 @@
           body: JSON.stringify(payload)
         }).catch(err => console.error('Sheet update failed', err));
 
-        setActiveOrder(payload);
+        setActiveOrdersList(prev => [payload, ...prev]);
+        setSearchedMobile(orderDetails.mobile);
         setCart([]);
         setCustomerTab('tracking');
       };
@@ -185,7 +191,7 @@
         <AppContext.Provider value={{
           customerTab, setCustomerTab, selectedRest, setSelectedRest,
           searchQuery, setSearchQuery, selectedCategory, setSelectedCategory,
-          products, restaurants, activeOrder, setActiveOrder, fetchOrderByMobile,
+          products, restaurants, activeOrdersList, fetchOrderByMobile,
           cart, addToCart, updateCartQty, applyCoupon, couponCode, setCouponCode,
           subtotal, discountAmount, grandTotal, placeOrder
         }}>
@@ -411,7 +417,7 @@
     };
 
     const LiveTrackingView = () => {
-      const { activeOrder, setCustomerTab, fetchOrderByMobile } = useApp();
+      const { activeOrdersList, setCustomerTab, fetchOrderByMobile } = useApp();
       const [inputMobile, setInputMobile] = useState('');
       const [loading, setLoading] = useState(false);
       const [errorMsg, setErrorMsg] = useState('');
@@ -460,42 +466,48 @@
             )}
           </div>
 
-          {/* Active Order Stepper Card (Only visible if order found) */}
-          {activeOrder ? (
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-6 shadow-sm">
-              <div className="text-center space-y-1">
-                <span className="text-[11px] font-extrabold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">{activeOrder.orderId}</span>
-                <h3 className="font-extrabold text-lg text-slate-900">Live Order Tracking</h3>
-                <p className="text-[11px] text-slate-400">Status updates automatically from Google Sheet</p>
-              </div>
-
-              {/* Status Stepper */}
-              <div className="space-y-4 text-xs font-bold pt-2">
-                {[
-                  { step: 1, label: 'Order Placed', desc: 'Received and saved to system' },
-                  { step: 2, label: 'Preparing', desc: 'Kitchen is preparing your order' },
-                  { step: 3, label: 'On the Way', desc: 'Rider is carrying your food' },
-                  { step: 4, label: 'Delivered', desc: 'Food delivered successfully' },
-                ].map(s => (
-                  <div key={s.step} className="flex gap-4 items-center">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs text-white ${activeOrder.statusStep >= s.step ? 'bg-emerald-600 font-extrabold' : 'bg-slate-200 text-slate-400'}`}>
-                      {s.step}
-                    </div>
-                    <div>
-                      <p className={activeOrder.statusStep >= s.step ? 'text-slate-900 font-bold' : 'text-slate-400'}>{s.label}</p>
-                      <p className="text-[10px] text-slate-400 font-normal">{s.desc}</p>
-                    </div>
+          {/* Active Orders List */}
+          {activeOrdersList && activeOrdersList.length > 0 ? (
+            <div className="space-y-6">
+              <p className="text-xs font-bold text-slate-500 text-center">Found {activeOrdersList.length} Order(s) for this number</p>
+              
+              {activeOrdersList.map((order, idx) => (
+                <div key={order.orderId || idx} className="bg-white border border-slate-200 rounded-2xl p-6 space-y-6 shadow-sm">
+                  <div className="text-center space-y-1">
+                    <span className="text-[11px] font-extrabold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">{order.orderId}</span>
+                    <h3 className="font-extrabold text-lg text-slate-900">Live Order Tracking</h3>
+                    <p className="text-[11px] text-slate-400">Status updates automatically from Google Sheet</p>
                   </div>
-                ))}
-              </div>
 
-              {/* Customer Details */}
-              <div className="border-t pt-4 text-xs text-slate-600 space-y-1">
-                <p><strong>Customer:</strong> {activeOrder.name} ({activeOrder.mobile})</p>
-                <p><strong>Items:</strong> {Array.isArray(activeOrder.items) ? activeOrder.items.join(', ') : activeOrder.items}</p>
-                <p><strong>Address:</strong> {activeOrder.address}</p>
-                <p><strong>Total Paid:</strong> ₹{activeOrder.totalAmount}</p>
-              </div>
+                  {/* Status Stepper */}
+                  <div className="space-y-4 text-xs font-bold pt-2">
+                    {[
+                      { step: 1, label: 'Order Placed', desc: 'Received and saved to system' },
+                      { step: 2, label: 'Preparing', desc: 'Kitchen is preparing your order' },
+                      { step: 3, label: 'On the Way', desc: 'Rider is carrying your food' },
+                      { step: 4, label: 'Delivered', desc: 'Food delivered successfully' },
+                    ].map(s => (
+                      <div key={s.step} className="flex gap-4 items-center">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs text-white ${order.statusStep >= s.step ? 'bg-emerald-600 font-extrabold' : 'bg-slate-200 text-slate-400'}`}>
+                          {s.step}
+                        </div>
+                        <div>
+                          <p className={order.statusStep >= s.step ? 'text-slate-900 font-bold' : 'text-slate-400'}>{s.label}</p>
+                          <p className="text-[10px] text-slate-400 font-normal">{s.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Customer Details */}
+                  <div className="border-t pt-4 text-xs text-slate-600 space-y-1">
+                    <p><strong>Customer:</strong> {order.name} ({order.mobile})</p>
+                    <p><strong>Items:</strong> {Array.isArray(order.items) ? order.items.join(', ') : order.items}</p>
+                    <p><strong>Address:</strong> {order.address}</p>
+                    <p><strong>Total Paid:</strong> ₹{order.totalAmount}</p>
+                  </div>
+                </div>
+              ))}
 
               <button onClick={() => setCustomerTab('home')} className="w-full py-2.5 bg-slate-100 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-200">
                 ← Back to Main Menu
