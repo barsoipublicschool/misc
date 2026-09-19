@@ -47,6 +47,7 @@
   <script type="text/babel">
     const { useState, useEffect, createContext, useContext } = React;
 
+    // YAHA APNA NAYA WEB APP URL ENTER KAREIN
     const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbygWrQad1bbGz7G5s3PHOjzPb38PWu6NpQ8QbDcRrvu6ncnZ5sCwjJVDKabNdAFwa81/exec";
     const MERCHANT_UPI_ID = "9876543210@paytm";
 
@@ -82,7 +83,6 @@
       const [couponCode, setCouponCode] = useState('');
       const [discountPercent, setDiscountPercent] = useState(0);
 
-      // Fetch Products from Google Sheet on Load
       const loadProducts = () => {
         fetch(`${GOOGLE_SHEET_URL}?action=GET_PRODUCTS`)
           .then(res => res.json())
@@ -286,7 +286,6 @@
       return (
         <header className="sticky top-0 bg-white border-b border-slate-200 z-40 shadow-xs no-print">
           <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
-            
             <div className="flex items-center gap-3">
               <button onClick={() => setMenuOpen(!menuOpen)} className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 transition">
                 <svg className="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -322,7 +321,6 @@
                 )}
               </button>
             </div>
-
           </div>
 
           {menuOpen && (
@@ -369,7 +367,6 @@
 
       return (
         <div className="max-w-7xl mx-auto px-4 py-6 space-y-8">
-          
           <div className="bg-gradient-to-r from-emerald-700 to-teal-800 rounded-3xl p-6 sm:p-10 text-white relative overflow-hidden flex flex-col justify-center min-h-[200px]">
             <div className="relative z-10 max-w-lg space-y-2">
               <span className="bg-orange-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">Fast Delivery</span>
@@ -440,7 +437,6 @@
               ))}
             </div>
           </div>
-
         </div>
       );
     };
@@ -479,12 +475,11 @@
         );
       }
 
-      const upiLink = `upi://pay?pa=${riyazahmad5@okaxis}&pn=FoodExpress&am=${grandTotal}&cu=INR`;
+      const upiLink = `upi://pay?pa=${MERCHANT_UPI_ID}&pn=FoodExpress&am=${grandTotal}&cu=INR`;
       const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(upiLink)}`;
 
       return (
         <div className="max-w-5xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
           <div className="lg:col-span-2 space-y-4">
             <h3 className="font-extrabold text-lg text-slate-900">Order Summary</h3>
             <div className="bg-white rounded-2xl border border-slate-200 divide-y">
@@ -571,13 +566,12 @@
               <button type="submit" className="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl text-xs hover:bg-emerald-700 shadow-sm">Place Order (₹{grandTotal})</button>
             </form>
           </div>
-
         </div>
       );
     };
 
     const LiveTrackingView = () => {
-      const { activeOrdersList, setCustomerTab, fetchOrderByMobile, cancelOrder } = useApp();
+      const { activeOrdersList, fetchOrderByMobile, cancelOrder } = useApp();
       const [inputMobile, setInputMobile] = useState('');
       const [loading, setLoading] = useState(false);
       const [errorMsg, setErrorMsg] = useState('');
@@ -605,7 +599,6 @@
 
       return (
         <div className="max-w-md mx-auto py-8 px-4 space-y-6">
-          
           <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-xs no-print">
             <h4 className="font-extrabold text-slate-900 text-sm">🔍 Track Order by Mobile Number</h4>
             <form onSubmit={handleSearch} className="flex gap-2">
@@ -692,7 +685,6 @@
               ))}
             </div>
           )}
-
         </div>
       );
     };
@@ -738,12 +730,11 @@
       );
     };
 
-    // Complete Admin Dashboard + Add Dish Form
     const AdminView = () => {
-      const { addNewProduct, loadProducts } = useApp();
+      const { addNewProduct } = useApp();
       const [allOrders, setAllOrders] = useState([]);
       const [loading, setLoading] = useState(true);
-      const [activeTab, setActiveTab] = useState('orders'); // 'orders' or 'add_item'
+      const [activeTab, setActiveTab] = useState('orders');
 
       const [newDish, setNewDish] = useState({
         name: '', price: '', category: 'Pizza', isVeg: true, image: '', desc: ''
@@ -887,7 +878,6 @@
               </form>
             </div>
           )}
-
         </div>
       );
     };
@@ -909,7 +899,8 @@
       );
     };
 
-    ReactDOM.createRoot(document.getElementById('root')).render(
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(
       <AppProvider>
         <MainApp />
       </AppProvider>
