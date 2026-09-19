@@ -25,6 +25,8 @@
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- SweetAlert2 Library -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
@@ -82,9 +84,28 @@
       const [couponCode, setCouponCode] = useState('');
       const [discountPercent, setDiscountPercent] = useState(0);
 
-      // Auth States for Protected Views
-      const [isDeliveryAuth, setIsDeliveryAuth] = useState(false);
-      const [isAdminAuth, setIsAdminAuth] = useState(false);
+      // User Location State
+      const [userLocation, setUserLocation] = useState({ address: '', coords: '' });
+
+      // Auto Ask Location Permission on Initial Load
+      useEffect(() => {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const { latitude, longitude } = pos.coords;
+              const coordsStr = `${latitude.toFixed(6)},${longitude.toFixed(6)}`;
+              setUserLocation({
+                coords: coordsStr,
+                address: `GPS Location (${coordsStr})`
+              });
+            },
+            (err) => {
+              console.warn("Location permission denied or unavailable.");
+            },
+            { enableHighAccuracy: true }
+          );
+        }
+      }, []);
 
       const loadProducts = () => {
         fetch(`${GOOGLE_SHEET_URL}?action=GET_PRODUCTS`)
@@ -167,12 +188,12 @@
               return { success: true };
             } else {
               setActiveOrdersList([]);
-              return { success: false, message: "❌ Galat number ya koi active order nahi mila!" };
+              return { success: false, message: "No active orders found for this mobile number!" };
             }
           })
           .catch(() => {
             setActiveOrdersList([]);
-            return { success: false, message: "❌ Server Error! Kripya dobara try karein." };
+            return { success: false, message: "Server Error! Please try again later." };
           });
       };
 
@@ -181,6 +202,13 @@
           const exists = prev.find(i => i.product.id === product.id);
           if (exists) return prev.map(i => i.product.id === product.id ? { ...i, qty: i.qty + 1 } : i);
           return [...prev, { product, qty: 1 }];
+        });
+        Swal.fire({
+          icon: 'success',
+          title: 'Item Added',
+          text: `${product.name} added to cart!`,
+          timer: 1500,
+          showConfirmButton: false
         });
       };
 
@@ -197,9 +225,19 @@
       const applyCoupon = () => {
         if (couponCode.toUpperCase() === 'FOOD50') {
           setDiscountPercent(20);
-          alert('Coupon Applied: 20% Discount!');
+          Swal.fire({
+            icon: 'success',
+            title: 'Coupon Applied!',
+            text: 'You got 20% discount!',
+            confirmButtonColor: '#059669'
+          });
         } else {
-          alert('Invalid Coupon Code. Try FOOD50');
+          Swal.fire({
+            icon: 'error',
+            title: 'Invalid Coupon',
+            text: 'Try using coupon code FOOD50',
+            confirmButtonColor: '#059669'
+          });
         }
       };
 
@@ -216,7 +254,7 @@
           name: orderDetails.name,
           mobile: orderDetails.mobile,
           address: orderDetails.address,
-          locationCoords: orderDetails.locationCoords || '',
+          locationCoords: orderDetails.locationCoords || userLocation.coords || '',
           paymentMethod: orderDetails.payment,
           items: cart.map(i => `${i.product.name} (x${i.qty})`).join(', '),
           totalAmount: grandTotal,
@@ -240,18 +278,41 @@
         setSearchedMobile(orderDetails.mobile);
         setCart([]);
         setCustomerTab('tracking');
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Order Placed Successfully!',
+          text: `Your Order ID is ${orderId}`,
+          confirmButtonColor: '#059669'
+        });
       };
 
       const cancelOrder = (orderId) => {
-        if (!confirm("Kya aap sach me is order ko cancel karna chahte hain?")) return;
-        fetch(GOOGLE_SHEET_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: "UPDATE_STATUS", orderId, status: "Cancelled" })
-        }).then(() => {
-          setActiveOrdersList(prev => prev.map(o => o.orderId === orderId ? { ...o, status: 'Cancelled', statusStep: 0, eta: '❌ Cancelled' } : o));
-          alert("Order cancel kar diya gaya hai.");
+        Swal.fire({
+          title: 'Are you sure?',
+          text: "Do you really want to cancel this order?",
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#d33',
+          cancelButtonColor: '#3085d6',
+          confirmButtonText: 'Yes, Cancel it!'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            fetch(GOOGLE_SHEET_URL, {
+              method: 'POST',
+              mode: 'no-cors',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: "UPDATE_STATUS", orderId, status: "Cancelled" })
+            }).then(() => {
+              setActiveOrdersList(prev => prev.map(o => o.orderId === orderId ? { ...o, status: 'Cancelled', statusStep: 0, eta: '❌ Cancelled' } : o));
+              Swal.fire({
+                icon: 'success',
+                title: 'Cancelled!',
+                text: 'Your order has been cancelled.',
+                confirmButtonColor: '#059669'
+              });
+            });
+          }
         });
       };
 
@@ -263,38 +324,73 @@
           body: JSON.stringify({ action: "ADD_PRODUCT", ...newProd })
         }).then(() => {
           setProducts(prev => [newProd, ...prev]);
-          alert("New Dish added to Google Sheet & Menu!");
+          Swal.fire({
+            icon: 'success',
+            title: 'Dish Added!',
+            text: 'New dish added to Google Sheet & Menu!',
+            confirmButtonColor: '#059669'
+          });
         });
       };
 
-      // Handler for Login Access Prompt
+      // Protected Tab Access with Password Verification
       const openProtectedTab = (tabName) => {
-        if (tabName === 'delivery') {
-          if (isDeliveryAuth) {
-            setCustomerTab('delivery');
-          } else {
-            const user = prompt("Delivery Boy User ID:");
-            const pass = prompt("Delivery Boy Password:");
-            if (user === "delivery" && pass === "1234") {
-              setIsDeliveryAuth(true);
-              setCustomerTab('delivery');
-            } else {
-              alert("❌ Incorrect User ID or Password! (Default ID: delivery / Pass: 1234)");
+        if (tabName === 'admin') {
+          Swal.fire({
+            title: 'Admin Portal Login',
+            html: `
+              <input id="swal-input1" class="swal2-input" placeholder="Username" style="margin-bottom: 10px;">
+              <input id="swal-input2" type="password" class="swal2-input" placeholder="Password">
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'Login',
+            confirmButtonColor: '#059669',
+            preConfirm: () => {
+              return [
+                document.getElementById('swal-input1').value,
+                document.getElementById('swal-input2').value
+              ]
             }
-          }
-        } else if (tabName === 'admin') {
-          if (isAdminAuth) {
-            setCustomerTab('admin');
-          } else {
-            const user = prompt("Admin User ID:");
-            const pass = prompt("Admin Password:");
-            if (user === "admin" && pass === "admin123") {
-              setIsAdminAuth(true);
-              setCustomerTab('admin');
-            } else {
-              alert("❌ Incorrect Admin Credentials! (Default ID: admin / Pass: admin123)");
+          }).then((result) => {
+            if (result.isConfirmed) {
+              const [user, pass] = result.value;
+              if (user === 'admin' && pass === 'admin123') {
+                setCustomerTab('admin');
+              } else {
+                Swal.fire({ icon: 'error', title: 'Access Denied', text: 'Invalid Admin Credentials!', confirmButtonColor: '#059669' });
+              }
             }
-          }
+          });
+        } else if (tabName === 'delivery') {
+          Swal.fire({
+            title: 'Delivery Partner Login',
+            html: `
+              <input id="swal-input1" class="swal2-input" placeholder="Username" style="margin-bottom: 10px;">
+              <input id="swal-input2" type="password" class="swal2-input" placeholder="Password">
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'Login',
+            confirmButtonColor: '#059669',
+            preConfirm: () => {
+              return [
+                document.getElementById('swal-input1').value,
+                document.getElementById('swal-input2').value
+              ]
+            }
+          }).then((result) => {
+            if (result.isConfirmed) {
+              const [user, pass] = result.value;
+              if (user === 'delivery' && pass === '1234') {
+                setCustomerTab('delivery');
+              } else {
+                Swal.fire({ icon: 'error', title: 'Access Denied', text: 'Invalid Delivery Credentials!', confirmButtonColor: '#059669' });
+              }
+            }
+          });
+        } else {
+          setCustomerTab(tabName);
         }
       };
 
@@ -305,7 +401,7 @@
           vegOnlyFilter, setVegOnlyFilter, products, restaurants, activeOrdersList, fetchOrderByMobile,
           cart, addToCart, updateCartQty, applyCoupon, couponCode, setCouponCode,
           subtotal, discountAmount, grandTotal, placeOrder, cancelOrder, favorites, toggleFavorite, addNewProduct, loadProducts,
-          openProtectedTab
+          openProtectedTab, userLocation, setUserLocation
         }}>
           {children}
         </AppContext.Provider>
@@ -315,7 +411,7 @@
     const useApp = () => useContext(AppContext);
 
     const CustomerHeader = () => {
-      const { setCustomerTab, cart, searchQuery, setSearchQuery, vegOnlyFilter, setVegOnlyFilter, openProtectedTab } = useApp();
+      const { setCustomerTab, cart, searchQuery, setSearchQuery, vegOnlyFilter, setVegOnlyFilter, openProtectedTab, userLocation } = useApp();
       const [menuOpen, setMenuOpen] = useState(false);
       const totalCartQty = cart.reduce((sum, item) => sum + item.qty, 0);
 
@@ -335,7 +431,7 @@
               </div>
             </div>
 
-            {/* Mobile & Desktop Search Bar (Changing #1) */}
+            {/* Mobile & Desktop Search Bar */}
             <div className="flex-1 max-w-xs sm:max-w-md">
               <input 
                 type="text" 
@@ -361,7 +457,33 @@
             </div>
           </div>
 
-          {/* Vertical Hamburger Menu (Changing #2) */}
+          {/* Location Banner */}
+          <div className="bg-orange-50 border-t border-b border-orange-100 px-4 py-2 flex items-center justify-between text-xs font-medium text-orange-900">
+            <div className="flex items-center gap-2 truncate">
+              <span className="text-orange-600 font-bold">📍 Location:</span>
+              <span className="truncate">{userLocation.address || "You are in Patna! Setup your precise location"}</span>
+            </div>
+            <button 
+              onClick={() => {
+                if (navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition((pos) => {
+                    const coords = `${pos.coords.latitude.toFixed(6)},${pos.coords.longitude.toFixed(6)}`;
+                    Swal.fire({
+                      icon: 'success',
+                      title: 'Location Captured',
+                      text: `Coordinates: ${coords}`,
+                      confirmButtonColor: '#059669'
+                    });
+                  });
+                }
+              }} 
+              className="text-orange-600 font-bold hover:underline shrink-0 ml-2"
+            >
+              Setup precise location &gt;
+            </button>
+          </div>
+
+          {/* Vertical Hamburger Menu */}
           {menuOpen && (
             <div className="bg-white border-b border-slate-200 px-6 py-4 space-y-2 shadow-lg">
               <div className="flex justify-between items-center border-b pb-2 mb-2">
@@ -370,7 +492,6 @@
               </div>
               
               <div className="flex flex-col gap-2 text-xs font-bold">
-                {/* Home Button First */}
                 <button onClick={() => { setCustomerTab('home'); setMenuOpen(false); }} className="p-3 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl text-left border flex items-center gap-3">
                   <span>🏠</span> Home
                 </button>
@@ -384,18 +505,24 @@
                   <span>📜</span> Re-Order / Track
                 </button>
                 
-                {/* Protected Login for Delivery Boy */}
                 <button onClick={() => { openProtectedTab('delivery'); setMenuOpen(false); }} className="p-3 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl text-left border flex items-center gap-3">
-                  <span>🛵</span> Delivery Boy (Password Required)
+                  <span>🛵</span> Delivery Boy Portal
                 </button>
                 
-                <button onClick={() => { alert('Support: +91 9876543210'); setMenuOpen(false); }} className="p-3 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl text-left border flex items-center gap-3">
+                <button onClick={() => { 
+                  Swal.fire({
+                    title: 'Help Desk',
+                    text: 'Customer Support: +91 9876543210',
+                    icon: 'info',
+                    confirmButtonColor: '#059669'
+                  });
+                  setMenuOpen(false); 
+                }} className="p-3 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl text-left border flex items-center gap-3">
                   <span>📞</span> Help Desk
                 </button>
                 
-                {/* Protected Login for Admin Panel */}
                 <button onClick={() => { openProtectedTab('admin'); setMenuOpen(false); }} className="p-3 bg-slate-900 text-white rounded-xl text-left border flex items-center gap-3">
-                  <span>⚡</span> Admin Panel (Password Required)
+                  <span>⚡</span> Admin Panel
                 </button>
               </div>
             </div>
@@ -425,7 +552,7 @@
           </div>
 
           <div className="space-y-3">
-            <h3 className="font-extrabold text-slate-900 text-lg">Popular Categories</h3>
+            <h3 className="font-extrabold text-slate-900 text-lg">What's on your mind?</h3>
             <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
               {INITIAL_CATEGORIES.map(cat => (
                 <button 
@@ -440,7 +567,7 @@
           </div>
 
           <div className="space-y-4">
-            <h3 className="font-extrabold text-slate-900 text-lg">Featured Restaurants</h3>
+            <h3 className="font-extrabold text-slate-900 text-lg">Top restaurant chains</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {restaurants.map(r => (
                 <div 
@@ -491,14 +618,20 @@
     };
 
     const CartAndCheckout = () => {
-      const { cart, updateCartQty, applyCoupon, couponCode, setCouponCode, subtotal, discountAmount, grandTotal, placeOrder } = useApp();
-      const [checkoutForm, setCheckoutForm] = useState({ name: '', mobile: '', address: '', locationCoords: '', payment: 'COD', notes: '' });
+      const { cart, updateCartQty, applyCoupon, couponCode, setCouponCode, subtotal, discountAmount, grandTotal, placeOrder, userLocation, setUserLocation } = useApp();
+      const [checkoutForm, setCheckoutForm] = useState({ 
+        name: '', 
+        mobile: '', 
+        address: userLocation.address || '', 
+        locationCoords: userLocation.coords || '', 
+        payment: 'COD', 
+        notes: '' 
+      });
       const [locating, setLocating] = useState(false);
 
-      // GPS Auto-Detect (Changing #4)
       const detectGPS = () => {
         if (!navigator.geolocation) {
-          alert("Geolocation support nahi hai browser me.");
+          Swal.fire({ icon: 'error', title: 'Error', text: 'Geolocation is not supported by your browser.', confirmButtonColor: '#059669' });
           return;
         }
         setLocating(true);
@@ -509,13 +642,14 @@
             setCheckoutForm(prev => ({ 
               ...prev, 
               locationCoords: coordsString,
-              address: prev.address ? prev.address : `Current GPS Location Attached (${coordsString})` 
+              address: prev.address ? prev.address : `Captured GPS Location (${coordsString})` 
             }));
+            setUserLocation({ address: `GPS Location (${coordsString})`, coords: coordsString });
             setLocating(false);
-            alert("✅ Current Location successfully fetched!");
+            Swal.fire({ icon: 'success', title: 'Location Fetched!', text: `Coordinates: ${coordsString}`, confirmButtonColor: '#059669' });
           },
           () => {
-            alert("Location fetch karne me dikkat hui. Kripya manual address likhein.");
+            Swal.fire({ icon: 'error', title: 'Location Error', text: 'Unable to fetch location. Please type manually.', confirmButtonColor: '#059669' });
             setLocating(false);
           },
           { enableHighAccuracy: true }
@@ -591,7 +725,7 @@
                 </div>
                 <textarea required value={checkoutForm.address} onChange={e => setCheckoutForm({...checkoutForm, address: e.target.value})} className="w-full border p-2.5 rounded-xl font-medium" rows="2" placeholder="Full Address / Landmark"></textarea>
                 {checkoutForm.locationCoords && (
-                  <p className="text-[10px] text-emerald-600 font-bold mt-1">✓ Live Coordinates Captured: {checkoutForm.locationCoords}</p>
+                  <p className="text-[10px] text-emerald-600 font-bold mt-1">✓ Live Coordinates Marked: {checkoutForm.locationCoords}</p>
                 )}
               </div>
 
@@ -640,7 +774,7 @@
       const handleSearch = (e) => {
         e.preventDefault();
         if (!inputMobile || inputMobile.length < 10) {
-          setErrorMsg('❌ Kripya 10-digit mobile number enter karein!');
+          setErrorMsg('Please enter a valid 10-digit mobile number!');
           return;
         }
         setLoading(true);
@@ -648,13 +782,6 @@
         fetchOrderByMobile(inputMobile)
           .then(res => { if (!res.success) setErrorMsg(res.message); })
           .finally(() => setLoading(false));
-      };
-
-      const handlePrint = () => { window.print(); };
-
-      const shareToWhatsApp = (order) => {
-        const text = `Order Details:\nID: ${order.orderId}\nItems: ${order.items}\nTotal: ₹${order.totalAmount}\nStatus: ${order.status}`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
       };
 
       return (
@@ -712,6 +839,7 @@
                     <p><strong>Customer:</strong> {order.name} ({order.mobile})</p>
                     <p><strong>Items:</strong> {order.items}</p>
                     <p><strong>Address:</strong> {order.address}</p>
+                    {order.locationCoords && <p className="text-emerald-600 font-bold"><strong>Location Mark:</strong> {order.locationCoords}</p>}
                     {order.notes && <p className="text-orange-600"><strong>Note:</strong> {order.notes}</p>}
                     <p><strong>Total:</strong> ₹{order.totalAmount}</p>
                   </div>
@@ -721,7 +849,10 @@
                       <p className="text-xs font-bold text-slate-700">Rate your meal:</p>
                       <div className="flex justify-center gap-2 text-lg">
                         {[1, 2, 3, 4, 5].map(star => (
-                          <button key={star} onClick={() => { setRatings({...ratings, [order.orderId]: star}); alert("Thank you for your rating!"); }}>
+                          <button key={star} onClick={() => { 
+                            setRatings({...ratings, [order.orderId]: star}); 
+                            Swal.fire({ icon: 'success', title: 'Thank You!', text: 'Thank you for your rating!', confirmButtonColor: '#059669' });
+                          }}>
                             {star <= (ratings[order.orderId] || 0) ? '⭐' : '☆'}
                           </button>
                         ))}
@@ -730,11 +861,6 @@
                   )}
 
                   <div className="no-print space-y-2">
-                    <div className="grid grid-cols-2 gap-2">
-                      <button onClick={handlePrint} className="py-2 bg-slate-900 text-white font-bold rounded-xl text-xs">🖨️ Print</button>
-                      <button onClick={() => shareToWhatsApp(order)} className="py-2 bg-emerald-600 text-white font-bold rounded-xl text-xs">💬 Share</button>
-                    </div>
-
                     {order.status === 'Order Placed' && (
                       <button onClick={() => cancelOrder(order.orderId)} className="w-full py-2 bg-red-50 text-red-600 border border-red-200 font-bold rounded-xl text-xs">
                         🚫 Cancel Order
@@ -749,7 +875,6 @@
       );
     };
 
-    // Delivery Boy View with Live GPS Tracking (Changing #4)
     const DeliveryView = () => {
       const [allOrders, setAllOrders] = useState([]);
 
@@ -766,7 +891,6 @@
 
           <div className="space-y-4">
             {allOrders.map(order => {
-              // Generate map query: Priority given to locationCoords if captured
               const mapQuery = order.locationCoords ? order.locationCoords : order.address;
               const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`;
 
@@ -781,7 +905,7 @@
                     <p><strong>Phone:</strong> <a href={`tel:${order.mobile}`} className="text-blue-600 underline">{order.mobile}</a></p>
                     <p><strong>Address:</strong> {order.address}</p>
                     {order.locationCoords && (
-                      <p className="text-emerald-700 bg-emerald-50 p-1 rounded font-bold">📍 GPS Coords: {order.locationCoords}</p>
+                      <p className="text-emerald-700 bg-emerald-50 p-1 rounded font-bold">📍 Marked GPS Location: {order.locationCoords}</p>
                     )}
                     <p><strong>Payment:</strong> {order.paymentMethod} (₹{order.totalAmount})</p>
                   </div>
@@ -790,7 +914,7 @@
                     target="_blank" 
                     className="block text-center py-2.5 bg-emerald-600 text-white font-bold rounded-xl text-xs hover:bg-emerald-700 shadow-sm"
                   >
-                    🗺️ Track Customer Location on Maps
+                    🗺️ Navigate to Customer Marked Location
                   </a>
                 </div>
               );
@@ -828,7 +952,7 @@
           body: JSON.stringify({ action: "UPDATE_STATUS", orderId, status: newStatus })
         }).then(() => {
           setAllOrders(prev => prev.map(o => o.orderId === orderId ? { ...o, status: newStatus } : o));
-          alert(`Status updated to: ${newStatus}`);
+          Swal.fire({ icon: 'success', title: 'Status Updated', text: `Status updated to: ${newStatus}`, confirmButtonColor: '#059669' });
         });
       };
 
@@ -887,7 +1011,7 @@
                         <span className="font-bold text-emerald-600">{order.orderId}</span> - <span className="text-slate-400">{order.date}</span>
                         <p className="font-bold text-slate-900">{order.name} ({order.mobile})</p>
                         <p className="text-slate-500">{order.items} - ₹{order.totalAmount}</p>
-                        {order.locationCoords && <p className="text-[10px] text-emerald-600 font-bold">📍 GPS: {order.locationCoords}</p>}
+                        {order.locationCoords && <p className="text-[10px] text-emerald-600 font-bold">📍 GPS Marked: {order.locationCoords}</p>}
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-slate-500">Status:</span>
@@ -953,7 +1077,6 @@
       );
     };
 
-    // Zomato Style Footer (Changing #3 - 3rd Screenshot matching)
     const Footer = () => {
       return (
         <footer className="bg-black text-gray-300 pt-10 pb-6 px-6 border-t border-gray-800 text-xs no-print mt-12">
