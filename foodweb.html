@@ -709,7 +709,7 @@
         );
       }
 
-      const upiLink = `upi://pay?pa=${riyazahmad5@okaxis}&pn=FoodExpress&am=${grandTotal}&cu=INR`;
+      const upiLink = `upi://pay?pa=${MERCHANT_UPI_ID}&pn=FoodExpress&am=${grandTotal}&cu=INR`;
       const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(upiLink)}`;
 
       return (
