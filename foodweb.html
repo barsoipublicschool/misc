@@ -47,7 +47,6 @@
   <script type="text/babel">
     const { useState, useEffect, createContext, useContext } = React;
 
-    // YAHA APNA NAYA WEB APP URL ENTER KAREIN
     const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbygWrQad1bbGz7G5s3PHOjzPb38PWu6NpQ8QbDcRrvu6ncnZ5sCwjJVDKabNdAFwa81/exec";
     const MERCHANT_UPI_ID = "9876543210@paytm";
 
@@ -82,6 +81,10 @@
       const [searchedMobile, setSearchedMobile] = useState('');
       const [couponCode, setCouponCode] = useState('');
       const [discountPercent, setDiscountPercent] = useState(0);
+
+      // Auth States for Protected Views
+      const [isDeliveryAuth, setIsDeliveryAuth] = useState(false);
+      const [isAdminAuth, setIsAdminAuth] = useState(false);
 
       const loadProducts = () => {
         fetch(`${GOOGLE_SHEET_URL}?action=GET_PRODUCTS`)
@@ -213,6 +216,7 @@
           name: orderDetails.name,
           mobile: orderDetails.mobile,
           address: orderDetails.address,
+          locationCoords: orderDetails.locationCoords || '',
           paymentMethod: orderDetails.payment,
           items: cart.map(i => `${i.product.name} (x${i.qty})`).join(', '),
           totalAmount: grandTotal,
@@ -263,13 +267,45 @@
         });
       };
 
+      // Handler for Login Access Prompt
+      const openProtectedTab = (tabName) => {
+        if (tabName === 'delivery') {
+          if (isDeliveryAuth) {
+            setCustomerTab('delivery');
+          } else {
+            const user = prompt("Delivery Boy User ID:");
+            const pass = prompt("Delivery Boy Password:");
+            if (user === "delivery" && pass === "1234") {
+              setIsDeliveryAuth(true);
+              setCustomerTab('delivery');
+            } else {
+              alert("❌ Incorrect User ID or Password! (Default ID: delivery / Pass: 1234)");
+            }
+          }
+        } else if (tabName === 'admin') {
+          if (isAdminAuth) {
+            setCustomerTab('admin');
+          } else {
+            const user = prompt("Admin User ID:");
+            const pass = prompt("Admin Password:");
+            if (user === "admin" && pass === "admin123") {
+              setIsAdminAuth(true);
+              setCustomerTab('admin');
+            } else {
+              alert("❌ Incorrect Admin Credentials! (Default ID: admin / Pass: admin123)");
+            }
+          }
+        }
+      };
+
       return (
         <AppContext.Provider value={{
           customerTab, setCustomerTab, selectedRest, setSelectedRest,
           searchQuery, setSearchQuery, selectedCategory, setSelectedCategory,
           vegOnlyFilter, setVegOnlyFilter, products, restaurants, activeOrdersList, fetchOrderByMobile,
           cart, addToCart, updateCartQty, applyCoupon, couponCode, setCouponCode,
-          subtotal, discountAmount, grandTotal, placeOrder, cancelOrder, favorites, toggleFavorite, addNewProduct, loadProducts
+          subtotal, discountAmount, grandTotal, placeOrder, cancelOrder, favorites, toggleFavorite, addNewProduct, loadProducts,
+          openProtectedTab
         }}>
           {children}
         </AppContext.Provider>
@@ -279,14 +315,14 @@
     const useApp = () => useContext(AppContext);
 
     const CustomerHeader = () => {
-      const { setCustomerTab, cart, searchQuery, setSearchQuery, vegOnlyFilter, setVegOnlyFilter } = useApp();
+      const { setCustomerTab, cart, searchQuery, setSearchQuery, vegOnlyFilter, setVegOnlyFilter, openProtectedTab } = useApp();
       const [menuOpen, setMenuOpen] = useState(false);
       const totalCartQty = cart.reduce((sum, item) => sum + item.qty, 0);
 
       return (
         <header className="sticky top-0 bg-white border-b border-slate-200 z-40 shadow-xs no-print">
-          <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
+          <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-2 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3">
               <button onClick={() => setMenuOpen(!menuOpen)} className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 transition">
                 <svg className="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6h16M4 12h16M4 18h16" />
@@ -299,23 +335,25 @@
               </div>
             </div>
 
-            <div className="flex-1 max-w-md hidden sm:block">
+            {/* Mobile & Desktop Search Bar (Changing #1) */}
+            <div className="flex-1 max-w-xs sm:max-w-md">
               <input 
                 type="text" 
                 placeholder="Search food or restaurant..." 
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-100 border-none rounded-xl px-4 py-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 outline-none"
+                className="w-full bg-slate-100 border-none rounded-xl px-3 sm:px-4 py-1.5 sm:py-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 outline-none"
               />
             </div>
 
-            <div className="flex items-center gap-3">
-              <button onClick={() => setCustomerTab('tracking')} className="text-xs font-bold text-orange-600 bg-orange-50 px-3 py-2 rounded-xl flex items-center gap-1 border border-orange-200 hover:bg-orange-100">
-                📍 Track Order
+            <div className="flex items-center gap-2 sm:gap-3">
+              <button onClick={() => setCustomerTab('tracking')} className="text-[11px] sm:text-xs font-bold text-orange-600 bg-orange-50 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl flex items-center gap-1 border border-orange-200 hover:bg-orange-100">
+                📍 <span className="hidden sm:inline">Track Order</span>
               </button>
 
-              <button onClick={() => setCustomerTab('cart')} className="relative bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm hover:bg-emerald-700">
-                <span>🛒 Cart</span>
+              <button onClick={() => setCustomerTab('cart')} className="relative bg-emerald-600 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm hover:bg-emerald-700">
+                <span>🛒</span>
+                <span className="hidden sm:inline">Cart</span>
                 {totalCartQty > 0 && (
                   <span className="bg-orange-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black">{totalCartQty}</span>
                 )}
@@ -323,30 +361,41 @@
             </div>
           </div>
 
+          {/* Vertical Hamburger Menu (Changing #2) */}
           {menuOpen && (
-            <div className="bg-white border-b border-slate-200 px-6 py-4 space-y-3 shadow-lg">
-              <div className="flex justify-between items-center border-b pb-2">
+            <div className="bg-white border-b border-slate-200 px-6 py-4 space-y-2 shadow-lg">
+              <div className="flex justify-between items-center border-b pb-2 mb-2">
                 <span className="font-extrabold text-slate-900 text-sm">Navigation Menu</span>
                 <button onClick={() => setMenuOpen(false)} className="text-xs font-bold text-slate-400">✕ Close</button>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 text-xs font-bold">
-                <button onClick={() => { setCustomerTab('home'); setMenuOpen(false); }} className="p-2.5 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl text-left border flex items-center gap-2">
+              
+              <div className="flex flex-col gap-2 text-xs font-bold">
+                {/* Home Button First */}
+                <button onClick={() => { setCustomerTab('home'); setMenuOpen(false); }} className="p-3 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl text-left border flex items-center gap-3">
+                  <span>🏠</span> Home
+                </button>
+                <button onClick={() => { setCustomerTab('home'); setMenuOpen(false); }} className="p-3 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl text-left border flex items-center gap-3">
                   <span>🔥</span> Offers (FOOD50)
                 </button>
-                <button onClick={() => { setVegOnlyFilter(!vegOnlyFilter); setMenuOpen(false); }} className={`p-2.5 rounded-xl text-left border flex items-center gap-2 ${vegOnlyFilter ? 'bg-emerald-600 text-white' : 'bg-slate-50 hover:bg-emerald-50'}`}>
+                <button onClick={() => { setVegOnlyFilter(!vegOnlyFilter); setMenuOpen(false); }} className={`p-3 rounded-xl text-left border flex items-center gap-3 ${vegOnlyFilter ? 'bg-emerald-600 text-white' : 'bg-slate-50 hover:bg-emerald-50'}`}>
                   <span>🌱</span> {vegOnlyFilter ? 'All Dishes' : 'Pure Veg Filter'}
                 </button>
-                <button onClick={() => { setCustomerTab('tracking'); setMenuOpen(false); }} className="p-2.5 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl text-left border flex items-center gap-2">
-                  <span>📜</span> Re-Order
+                <button onClick={() => { setCustomerTab('tracking'); setMenuOpen(false); }} className="p-3 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl text-left border flex items-center gap-3">
+                  <span>📜</span> Re-Order / Track
                 </button>
-                <button onClick={() => { setCustomerTab('delivery'); setMenuOpen(false); }} className="p-2.5 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl text-left border flex items-center gap-2">
-                  <span>🛵</span> Delivery Boy
+                
+                {/* Protected Login for Delivery Boy */}
+                <button onClick={() => { openProtectedTab('delivery'); setMenuOpen(false); }} className="p-3 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl text-left border flex items-center gap-3">
+                  <span>🛵</span> Delivery Boy (Password Required)
                 </button>
-                <button onClick={() => { alert('Support: +91 9876543210'); setMenuOpen(false); }} className="p-2.5 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl text-left border flex items-center gap-2">
+                
+                <button onClick={() => { alert('Support: +91 9876543210'); setMenuOpen(false); }} className="p-3 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl text-left border flex items-center gap-3">
                   <span>📞</span> Help Desk
                 </button>
-                <button onClick={() => { setCustomerTab('admin'); setMenuOpen(false); }} className="p-2.5 bg-slate-900 text-white rounded-xl text-left border flex items-center gap-2">
-                  <span>⚡</span> Admin Portal
+                
+                {/* Protected Login for Admin Panel */}
+                <button onClick={() => { openProtectedTab('admin'); setMenuOpen(false); }} className="p-3 bg-slate-900 text-white rounded-xl text-left border flex items-center gap-3">
+                  <span>⚡</span> Admin Panel (Password Required)
                 </button>
               </div>
             </div>
@@ -443,9 +492,10 @@
 
     const CartAndCheckout = () => {
       const { cart, updateCartQty, applyCoupon, couponCode, setCouponCode, subtotal, discountAmount, grandTotal, placeOrder } = useApp();
-      const [checkoutForm, setCheckoutForm] = useState({ name: '', mobile: '', address: '', payment: 'COD', notes: '' });
+      const [checkoutForm, setCheckoutForm] = useState({ name: '', mobile: '', address: '', locationCoords: '', payment: 'COD', notes: '' });
       const [locating, setLocating] = useState(false);
 
+      // GPS Auto-Detect (Changing #4)
       const detectGPS = () => {
         if (!navigator.geolocation) {
           alert("Geolocation support nahi hai browser me.");
@@ -455,13 +505,20 @@
         navigator.geolocation.getCurrentPosition(
           (pos) => {
             const { latitude, longitude } = pos.coords;
-            setCheckoutForm(prev => ({ ...prev, address: `GPS: ${latitude.toFixed(4)}, ${longitude.toFixed(4)} (Auto Detected Address)` }));
+            const coordsString = `${latitude.toFixed(6)},${longitude.toFixed(6)}`;
+            setCheckoutForm(prev => ({ 
+              ...prev, 
+              locationCoords: coordsString,
+              address: prev.address ? prev.address : `Current GPS Location Attached (${coordsString})` 
+            }));
             setLocating(false);
+            alert("✅ Current Location successfully fetched!");
           },
           () => {
             alert("Location fetch karne me dikkat hui. Kripya manual address likhein.");
             setLocating(false);
-          }
+          },
+          { enableHighAccuracy: true }
         );
       };
 
@@ -526,13 +583,16 @@
                 <input required type="tel" value={checkoutForm.mobile} onChange={e => setCheckoutForm({...checkoutForm, mobile: e.target.value})} className="w-full border p-2.5 rounded-xl mt-1 font-medium" placeholder="9876543210" />
               </div>
               <div>
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center mb-1">
                   <label className="font-bold text-slate-700">Delivery Address</label>
-                  <button type="button" onClick={detectGPS} className="text-[10px] font-extrabold text-emerald-600 hover:underline">
-                    {locating ? 'Locating...' : '📍 GPS Auto-Detect'}
+                  <button type="button" onClick={detectGPS} className="text-[10px] font-extrabold text-emerald-600 hover:underline bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                    {locating ? 'Locating...' : '📍 Capture Current Location'}
                   </button>
                 </div>
-                <textarea required value={checkoutForm.address} onChange={e => setCheckoutForm({...checkoutForm, address: e.target.value})} className="w-full border p-2.5 rounded-xl mt-1 font-medium" rows="2" placeholder="Full Address"></textarea>
+                <textarea required value={checkoutForm.address} onChange={e => setCheckoutForm({...checkoutForm, address: e.target.value})} className="w-full border p-2.5 rounded-xl font-medium" rows="2" placeholder="Full Address / Landmark"></textarea>
+                {checkoutForm.locationCoords && (
+                  <p className="text-[10px] text-emerald-600 font-bold mt-1">✓ Live Coordinates Captured: {checkoutForm.locationCoords}</p>
+                )}
               </div>
 
               <div>
@@ -689,6 +749,7 @@
       );
     };
 
+    // Delivery Boy View with Live GPS Tracking (Changing #4)
     const DeliveryView = () => {
       const [allOrders, setAllOrders] = useState([]);
 
@@ -704,27 +765,36 @@
           <p className="text-xs text-slate-500">Active deliveries assigned to you.</p>
 
           <div className="space-y-4">
-            {allOrders.map(order => (
-              <div key={order.orderId} className="bg-white border rounded-2xl p-4 space-y-3 shadow-xs">
-                <div className="flex justify-between items-center text-xs font-bold">
-                  <span className="text-emerald-600">{order.orderId}</span>
-                  <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">{order.status}</span>
+            {allOrders.map(order => {
+              // Generate map query: Priority given to locationCoords if captured
+              const mapQuery = order.locationCoords ? order.locationCoords : order.address;
+              const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`;
+
+              return (
+                <div key={order.orderId} className="bg-white border rounded-2xl p-4 space-y-3 shadow-xs">
+                  <div className="flex justify-between items-center text-xs font-bold">
+                    <span className="text-emerald-600">{order.orderId}</span>
+                    <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">{order.status}</span>
+                  </div>
+                  <div className="text-xs space-y-1 text-slate-700">
+                    <p><strong>Customer:</strong> {order.name}</p>
+                    <p><strong>Phone:</strong> <a href={`tel:${order.mobile}`} className="text-blue-600 underline">{order.mobile}</a></p>
+                    <p><strong>Address:</strong> {order.address}</p>
+                    {order.locationCoords && (
+                      <p className="text-emerald-700 bg-emerald-50 p-1 rounded font-bold">📍 GPS Coords: {order.locationCoords}</p>
+                    )}
+                    <p><strong>Payment:</strong> {order.paymentMethod} (₹{order.totalAmount})</p>
+                  </div>
+                  <a 
+                    href={mapUrl} 
+                    target="_blank" 
+                    className="block text-center py-2.5 bg-emerald-600 text-white font-bold rounded-xl text-xs hover:bg-emerald-700 shadow-sm"
+                  >
+                    🗺️ Track Customer Location on Maps
+                  </a>
                 </div>
-                <div className="text-xs space-y-1 text-slate-700">
-                  <p><strong>Customer:</strong> {order.name}</p>
-                  <p><strong>Phone:</strong> <a href={`tel:${order.mobile}`} className="text-blue-600 underline">{order.mobile}</a></p>
-                  <p><strong>Address:</strong> {order.address}</p>
-                  <p><strong>Payment:</strong> {order.paymentMethod} (₹{order.totalAmount})</p>
-                </div>
-                <a 
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`} 
-                  target="_blank" 
-                  className="block text-center py-2 bg-emerald-600 text-white font-bold rounded-xl text-xs"
-                >
-                  🗺️ Navigate on Google Maps
-                </a>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       );
@@ -817,6 +887,7 @@
                         <span className="font-bold text-emerald-600">{order.orderId}</span> - <span className="text-slate-400">{order.date}</span>
                         <p className="font-bold text-slate-900">{order.name} ({order.mobile})</p>
                         <p className="text-slate-500">{order.items} - ₹{order.totalAmount}</p>
+                        {order.locationCoords && <p className="text-[10px] text-emerald-600 font-bold">📍 GPS: {order.locationCoords}</p>}
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-slate-500">Status:</span>
@@ -882,19 +953,100 @@
       );
     };
 
+    // Zomato Style Footer (Changing #3 - 3rd Screenshot matching)
+    const Footer = () => {
+      return (
+        <footer className="bg-black text-gray-300 pt-10 pb-6 px-6 border-t border-gray-800 text-xs no-print mt-12">
+          <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div className="space-y-2">
+              <h5 className="font-bold text-white text-sm">Eternal</h5>
+              <ul className="space-y-1.5 text-gray-400">
+                <li><a href="#" className="hover:text-white">Zomato</a></li>
+                <li><a href="#" className="hover:text-white">Blinkit</a></li>
+                <li><a href="#" className="hover:text-white">District</a></li>
+                <li><a href="#" className="hover:text-white">Hyperpure</a></li>
+                <li><a href="#" className="hover:text-white">Feeding India</a></li>
+                <li><a href="#" className="hover:text-white">Investor Relations</a></li>
+              </ul>
+            </div>
+
+            <div className="space-y-2">
+              <h5 className="font-bold text-white text-sm">Learn More</h5>
+              <ul className="space-y-1.5 text-gray-400">
+                <li><a href="#" className="hover:text-white">Privacy</a></li>
+                <li><a href="#" className="hover:text-white">Security</a></li>
+                <li><a href="#" className="hover:text-white">Terms of Service</a></li>
+                <li><a href="#" className="hover:text-white">Help & Support</a></li>
+                <li><a href="#" className="hover:text-white">Report a Fraud</a></li>
+                <li><a href="#" className="hover:text-white">Blog</a></li>
+              </ul>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <h5 className="font-bold text-white text-sm">For Restaurants</h5>
+                <ul className="space-y-1.5 text-gray-400 mt-2">
+                  <li><a href="#" className="hover:text-white">Partner With Us</a></li>
+                  <li><a href="#" className="hover:text-white">Apps For You</a></li>
+                  <li><a href="#" className="hover:text-white">Restaurant Consulting</a></li>
+                </ul>
+              </div>
+              <div>
+                <h5 className="font-bold text-white text-sm">For Delivery Partners</h5>
+                <ul className="space-y-1.5 text-gray-400 mt-2">
+                  <li><a href="#" className="hover:text-white">Partner With Us</a></li>
+                  <li><a href="#" className="hover:text-white">Apps For You</a></li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h5 className="font-bold text-white text-sm">Social Links</h5>
+              <div className="flex gap-2 text-slate-900">
+                <span className="w-7 h-7 bg-white rounded-full flex items-center justify-center font-bold text-xs">in</span>
+                <span className="w-7 h-7 bg-white rounded-full flex items-center justify-center font-bold text-xs">📷</span>
+                <span className="w-7 h-7 bg-white rounded-full flex items-center justify-center font-bold text-xs">▶</span>
+                <span className="w-7 h-7 bg-white rounded-full flex items-center justify-center font-bold text-xs">f</span>
+                <span className="w-7 h-7 bg-white rounded-full flex items-center justify-center font-bold text-xs">𝕏</span>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <div className="border border-gray-700 rounded-lg p-2 text-center bg-zinc-900 cursor-pointer">
+                  <span className="text-[10px] block text-gray-400 uppercase">Download on the</span>
+                  <span className="font-bold text-white text-xs">App Store</span>
+                </div>
+                <div className="border border-gray-700 rounded-lg p-2 text-center bg-zinc-900 cursor-pointer">
+                  <span className="text-[10px] block text-gray-400 uppercase">GET IT ON</span>
+                  <span className="font-bold text-white text-xs">Google Play</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="max-w-7xl mx-auto border-t border-gray-800 mt-8 pt-6 text-[11px] text-gray-500 space-y-2">
+            <p>By continuing past this page, you agree to our Terms of Service, Cookie Policy, Privacy Policy and Content Policies. All trademarks are properties of their respective owners.</p>
+            <p>2008-2026 © FoodExpress™ Ltd. All rights reserved.</p>
+          </div>
+        </footer>
+      );
+    };
+
     const MainApp = () => {
       const { customerTab } = useApp();
 
       return (
-        <div className="min-h-screen flex flex-col">
-          <CustomerHeader />
-          <main className="flex-1">
-            {customerTab === 'home' && <CustomerHome />}
-            {customerTab === 'cart' && <CartAndCheckout />}
-            {customerTab === 'tracking' && <LiveTrackingView />}
-            {customerTab === 'delivery' && <DeliveryView />}
-            {customerTab === 'admin' && <AdminView />}
-          </main>
+        <div className="min-h-screen flex flex-col justify-between">
+          <div>
+            <CustomerHeader />
+            <main className="flex-1">
+              {customerTab === 'home' && <CustomerHome />}
+              {customerTab === 'cart' && <CartAndCheckout />}
+              {customerTab === 'tracking' && <LiveTrackingView />}
+              {customerTab === 'delivery' && <DeliveryView />}
+              {customerTab === 'admin' && <AdminView />}
+            </main>
+          </div>
+          <Footer />
         </div>
       );
     };
