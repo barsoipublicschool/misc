@@ -66,6 +66,20 @@
       { id: 'p3', name: 'Cheese Burst Burger', price: 149, category: 'Burger', isVeg: true, image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&q=80', desc: 'Loaded patty with melted cheddar cheese.' }
     ];
 
+    // Helper function to format image URLs (Google Drive handling)
+    const formatImageUrl = (url) => {
+      if (!url) return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80';
+      if (url.includes('drive.google.com')) {
+        let fileId = '';
+        const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
+        if (match && match[1]) {
+          fileId = match[1];
+          return `https://lh3.googleusercontent.com/d/${fileId}`;
+        }
+      }
+      return url;
+    };
+
     const AppContext = createContext();
 
     const AppProvider = ({ children }) => {
@@ -83,6 +97,10 @@
       const [searchedMobile, setSearchedMobile] = useState('');
       const [couponCode, setCouponCode] = useState('');
       const [discountPercent, setDiscountPercent] = useState(0);
+
+      // Saved Login States in LocalStorage
+      const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() => localStorage.getItem('foodexpress_admin') === 'true');
+      const [isDeliveryLoggedIn, setIsDeliveryLoggedIn] = useState(() => localStorage.getItem('foodexpress_delivery') === 'true');
 
       // User Location State
       const [userLocation, setUserLocation] = useState({ address: '', coords: '' });
@@ -333,9 +351,25 @@
         });
       };
 
-      // Protected Tab Access with Password Verification
+      const logoutAdmin = () => {
+        localStorage.removeItem('foodexpress_admin');
+        setIsAdminLoggedIn(false);
+        setCustomerTab('home');
+      };
+
+      const logoutDelivery = () => {
+        localStorage.removeItem('foodexpress_delivery');
+        setIsDeliveryLoggedIn(false);
+        setCustomerTab('home');
+      };
+
+      // Protected Tab Access with Password Verification & Persistence
       const openProtectedTab = (tabName) => {
         if (tabName === 'admin') {
+          if (isAdminLoggedIn) {
+            setCustomerTab('admin');
+            return;
+          }
           Swal.fire({
             title: 'Admin Portal Login',
             html: `
@@ -356,6 +390,8 @@
             if (result.isConfirmed) {
               const [user, pass] = result.value;
               if (user === 'admin' && pass === 'admin123') {
+                localStorage.setItem('foodexpress_admin', 'true');
+                setIsAdminLoggedIn(true);
                 setCustomerTab('admin');
               } else {
                 Swal.fire({ icon: 'error', title: 'Access Denied', text: 'Invalid Admin Credentials!', confirmButtonColor: '#059669' });
@@ -363,6 +399,10 @@
             }
           });
         } else if (tabName === 'delivery') {
+          if (isDeliveryLoggedIn) {
+            setCustomerTab('delivery');
+            return;
+          }
           Swal.fire({
             title: 'Delivery Partner Login',
             html: `
@@ -383,6 +423,8 @@
             if (result.isConfirmed) {
               const [user, pass] = result.value;
               if (user === 'delivery' && pass === '1234') {
+                localStorage.setItem('foodexpress_delivery', 'true');
+                setIsDeliveryLoggedIn(true);
                 setCustomerTab('delivery');
               } else {
                 Swal.fire({ icon: 'error', title: 'Access Denied', text: 'Invalid Delivery Credentials!', confirmButtonColor: '#059669' });
@@ -401,7 +443,7 @@
           vegOnlyFilter, setVegOnlyFilter, products, restaurants, activeOrdersList, fetchOrderByMobile,
           cart, addToCart, updateCartQty, applyCoupon, couponCode, setCouponCode,
           subtotal, discountAmount, grandTotal, placeOrder, cancelOrder, favorites, toggleFavorite, addNewProduct, loadProducts,
-          openProtectedTab, userLocation, setUserLocation
+          openProtectedTab, userLocation, setUserLocation, logoutAdmin, logoutDelivery
         }}>
           {children}
         </AppContext.Provider>
@@ -576,7 +618,7 @@
                   className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg transition cursor-pointer group"
                 >
                   <div className="h-40 overflow-hidden relative">
-                    <img src={r.image} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
+                    <img src={formatImageUrl(r.image)} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
                     <span className="absolute top-3 right-3 bg-white/90 backdrop-blur-xs text-slate-900 text-xs font-bold px-2 py-1 rounded-lg">⭐ {r.rating}</span>
                   </div>
                   <div className="p-4 space-y-1">
@@ -594,7 +636,7 @@
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProducts.map(p => (
                 <div key={p.id} className="bg-white rounded-2xl border border-slate-200 p-4 flex gap-4 items-center hover:shadow-md transition relative">
-                  <img src={p.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80'} className="w-24 h-24 rounded-xl object-cover" />
+                  <img src={formatImageUrl(p.image)} className="w-24 h-24 rounded-xl object-cover" />
                   <button onClick={() => toggleFavorite(p.id)} className="absolute top-3 right-3 text-sm">
                     {favorites.includes(p.id) ? '❤️' : '🤍'}
                   </button>
@@ -677,7 +719,7 @@
               {cart.map(({ product, qty }) => (
                 <div key={product.id} className="p-4 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <img src={product.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80'} className="w-14 h-14 rounded-xl object-cover" />
+                    <img src={formatImageUrl(product.image)} className="w-14 h-14 rounded-xl object-cover" />
                     <div>
                       <h4 className="font-bold text-xs text-slate-900">{product.name}</h4>
                       <p className="text-xs font-semibold text-slate-500">₹{product.price}</p>
@@ -876,6 +918,7 @@
     };
 
     const DeliveryView = () => {
+      const { logoutDelivery } = useApp();
       const [allOrders, setAllOrders] = useState([]);
 
       useEffect(() => {
@@ -886,8 +929,15 @@
 
       return (
         <div className="max-w-md mx-auto py-8 px-4 space-y-4">
-          <h3 className="font-extrabold text-xl text-slate-900">🛵 Delivery Partner Portal</h3>
-          <p className="text-xs text-slate-500">Active deliveries assigned to you.</p>
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="font-extrabold text-xl text-slate-900">🛵 Delivery Partner Portal</h3>
+              <p className="text-xs text-slate-500">Active deliveries assigned to you.</p>
+            </div>
+            <button onClick={logoutDelivery} className="bg-red-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-red-600">
+              Logout
+            </button>
+          </div>
 
           <div className="space-y-4">
             {allOrders.map(order => {
@@ -925,7 +975,7 @@
     };
 
     const AdminView = () => {
-      const { addNewProduct } = useApp();
+      const { addNewProduct, logoutAdmin } = useApp();
       const [allOrders, setAllOrders] = useState([]);
       const [loading, setLoading] = useState(true);
       const [activeTab, setActiveTab] = useState('orders');
@@ -981,6 +1031,7 @@
             <div className="flex gap-2">
               <button onClick={() => setActiveTab('orders')} className={`px-3 py-1.5 rounded-xl text-xs font-bold ${activeTab === 'orders' ? 'bg-slate-900 text-white' : 'bg-slate-100'}`}>Orders</button>
               <button onClick={() => setActiveTab('add_item')} className={`px-3 py-1.5 rounded-xl text-xs font-bold ${activeTab === 'add_item' ? 'bg-slate-900 text-white' : 'bg-slate-100'}`}>+ Add Food Item</button>
+              <button onClick={logoutAdmin} className="bg-red-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-red-600">Logout</button>
             </div>
           </div>
 
@@ -1060,8 +1111,8 @@
                   </select>
                 </div>
                 <div>
-                  <label className="font-bold">Image URL</label>
-                  <input type="url" value={newDish.image} onChange={e => setNewDish({...newDish, image: e.target.value})} className="w-full border p-2.5 rounded-xl mt-1 font-medium" placeholder="https://..." />
+                  <label className="font-bold">Image URL (Google Drive Links Supported)</label>
+                  <input type="url" value={newDish.image} onChange={e => setNewDish({...newDish, image: e.target.value})} className="w-full border p-2.5 rounded-xl mt-1 font-medium" placeholder="https://drive.google.com/..." />
                 </div>
                 <div>
                   <label className="font-bold">Description</label>
