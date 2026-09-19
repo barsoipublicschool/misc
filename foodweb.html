@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FoodExpress - Order Food Online</title>
+  <title>FoodExpress - Ultimate Food App</title>
   
-  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -23,7 +22,6 @@
     }
   </script>
 
-  <!-- React & ReactDOM CDN -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -33,6 +31,13 @@
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    @media print {
+      body * { visibility: hidden; }
+      .printable-receipt, .printable-receipt * { visibility: visible; }
+      .printable-receipt { position: absolute; left: 0; top: 0; width: 100%; }
+      .no-print { display: none !important; }
+    }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased selection:bg-emerald-500 selection:text-white">
@@ -42,7 +47,8 @@
   <script type="text/babel">
     const { useState, useEffect, createContext, useContext } = React;
 
-    const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbzsmYuKSf8-dPeklu4W-d7HPlCnwmhHx5JuRDLxWien5jibU-lNkOHXzKVYu2hOKqYJ/exec";
+    const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbygWrQad1bbGz7G5s3PHOjzPb38PWu6NpQ8QbDcRrvu6ncnZ5sCwjJVDKabNdAFwa81/exec";
+    const MERCHANT_UPI_ID = "9876543210@paytm";
 
     const INITIAL_CATEGORIES = ['All', 'Pizza', 'Burger', 'Biryani', 'Chinese', 'Desserts'];
 
@@ -52,7 +58,7 @@
       { id: 'r3', name: 'Burger Point', rating: 4.5, timing: '09:00 AM - 12:00 AM', image: 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=600&q=80', tags: 'Burgers, Snacks' }
     ];
 
-    const INITIAL_PRODUCTS = [
+    const DEFAULT_PRODUCTS = [
       { id: 'p1', name: 'Margherita Pizza', price: 249, category: 'Pizza', isVeg: true, image: 'https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?w=600&q=80', desc: 'Classic mozzarella cheese pizza loaded with basil.' },
       { id: 'p2', name: 'Special Chicken Biryani', price: 299, category: 'Biryani', isVeg: false, image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&q=80', desc: 'Aromatic basmati rice cooked with chicken.' },
       { id: 'p3', name: 'Cheese Burst Burger', price: 149, category: 'Burger', isVeg: true, image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&q=80', desc: 'Loaded patty with melted cheddar cheese.' }
@@ -65,27 +71,66 @@
       const [selectedRest, setSelectedRest] = useState(null);
       const [searchQuery, setSearchQuery] = useState('');
       const [selectedCategory, setSelectedCategory] = useState('All');
+      const [vegOnlyFilter, setVegOnlyFilter] = useState(false);
       
-      const [products] = useState(INITIAL_PRODUCTS);
+      const [products, setProducts] = useState(DEFAULT_PRODUCTS);
       const [restaurants] = useState(INITIAL_RESTAURANTS);
       const [cart, setCart] = useState([]);
+      const [favorites, setFavorites] = useState([]);
       const [activeOrdersList, setActiveOrdersList] = useState([]);
       const [searchedMobile, setSearchedMobile] = useState('');
       const [couponCode, setCouponCode] = useState('');
       const [discountPercent, setDiscountPercent] = useState(0);
 
-      // Helper function to map status string to step number
+      // Fetch Products from Google Sheet on Load
+      const loadProducts = () => {
+        fetch(`${GOOGLE_SHEET_URL}?action=GET_PRODUCTS`)
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.success && Array.isArray(data.products) && data.products.length > 0) {
+              setProducts(data.products);
+            }
+          })
+          .catch(() => {});
+      };
+
+      useEffect(() => { loadProducts(); }, []);
+
+      const playOrderSound = () => {
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const osc = ctx.createOscillator();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+          osc.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.3);
+        } catch(e) {}
+      };
+
+      const toggleFavorite = (productId) => {
+        setFavorites(prev => prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]);
+      };
+
       const getStep = (statusStr) => {
         if (statusStr === 'Preparing') return 2;
         if (statusStr === 'On the Way') return 3;
         if (statusStr === 'Delivered') return 4;
+        if (statusStr === 'Cancelled') return 0;
         return 1;
       };
 
-      // Auto Sync Statuses
+      const getETA = (statusStr) => {
+        if (statusStr === 'Order Placed') return '⏱️ ~35 - 40 Mins';
+        if (statusStr === 'Preparing') return '🍳 ~20 - 25 Mins';
+        if (statusStr === 'On the Way') return '🛵 ~10 Mins (Arriving Soon)';
+        if (statusStr === 'Delivered') return '✅ Delivered';
+        if (statusStr === 'Cancelled') return '❌ Order Cancelled';
+        return '⏱️ ~30 Mins';
+      };
+
       useEffect(() => {
         if (!searchedMobile) return;
-
         const interval = setInterval(() => {
           fetch(`${GOOGLE_SHEET_URL}?mobile=${searchedMobile}`)
             .then(res => res.json())
@@ -93,14 +138,14 @@
               if (data && data.success && Array.isArray(data.orders)) {
                 const formatted = data.orders.map(o => ({
                   ...o,
-                  statusStep: getStep(o.status)
+                  statusStep: getStep(o.status),
+                  eta: getETA(o.status)
                 }));
                 setActiveOrdersList(formatted);
               }
             })
             .catch(() => {});
         }, 5000);
-
         return () => clearInterval(interval);
       }, [searchedMobile]);
 
@@ -112,7 +157,8 @@
             if (data && data.success && Array.isArray(data.orders) && data.orders.length > 0) {
               const formatted = data.orders.map(o => ({
                 ...o,
-                statusStep: getStep(o.status)
+                statusStep: getStep(o.status),
+                eta: getETA(o.status)
               }));
               setActiveOrdersList(formatted);
               return { success: true };
@@ -160,6 +206,7 @@
 
       const placeOrder = (orderDetails) => {
         const orderId = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
+        const currentDate = new Date().toLocaleDateString('en-IN');
         const payload = {
           action: "ADD_ORDER",
           orderId,
@@ -171,8 +218,12 @@
           totalAmount: grandTotal,
           statusStep: 1,
           status: 'Order Placed',
-          date: new Date().toISOString().split('T')[0]
+          eta: '⏱️ ~35 - 40 Mins',
+          date: currentDate,
+          notes: orderDetails.notes || ''
         };
+
+        playOrderSound();
 
         fetch(GOOGLE_SHEET_URL, {
           method: 'POST',
@@ -187,13 +238,38 @@
         setCustomerTab('tracking');
       };
 
+      const cancelOrder = (orderId) => {
+        if (!confirm("Kya aap sach me is order ko cancel karna chahte hain?")) return;
+        fetch(GOOGLE_SHEET_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: "UPDATE_STATUS", orderId, status: "Cancelled" })
+        }).then(() => {
+          setActiveOrdersList(prev => prev.map(o => o.orderId === orderId ? { ...o, status: 'Cancelled', statusStep: 0, eta: '❌ Cancelled' } : o));
+          alert("Order cancel kar diya gaya hai.");
+        });
+      };
+
+      const addNewProduct = (newProd) => {
+        fetch(GOOGLE_SHEET_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: "ADD_PRODUCT", ...newProd })
+        }).then(() => {
+          setProducts(prev => [newProd, ...prev]);
+          alert("New Dish added to Google Sheet & Menu!");
+        });
+      };
+
       return (
         <AppContext.Provider value={{
           customerTab, setCustomerTab, selectedRest, setSelectedRest,
           searchQuery, setSearchQuery, selectedCategory, setSelectedCategory,
-          products, restaurants, activeOrdersList, fetchOrderByMobile,
+          vegOnlyFilter, setVegOnlyFilter, products, restaurants, activeOrdersList, fetchOrderByMobile,
           cart, addToCart, updateCartQty, applyCoupon, couponCode, setCouponCode,
-          subtotal, discountAmount, grandTotal, placeOrder
+          subtotal, discountAmount, grandTotal, placeOrder, cancelOrder, favorites, toggleFavorite, addNewProduct, loadProducts
         }}>
           {children}
         </AppContext.Provider>
@@ -203,16 +279,25 @@
     const useApp = () => useContext(AppContext);
 
     const CustomerHeader = () => {
-      const { setCustomerTab, cart, searchQuery, setSearchQuery } = useApp();
+      const { setCustomerTab, cart, searchQuery, setSearchQuery, vegOnlyFilter, setVegOnlyFilter } = useApp();
+      const [menuOpen, setMenuOpen] = useState(false);
       const totalCartQty = cart.reduce((sum, item) => sum + item.qty, 0);
 
       return (
-        <header className="sticky top-0 bg-white border-b border-slate-200 z-40 shadow-xs">
+        <header className="sticky top-0 bg-white border-b border-slate-200 z-40 shadow-xs no-print">
           <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
             
-            <div onClick={() => setCustomerTab('home')} className="flex items-center gap-2 cursor-pointer">
-              <div className="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-extrabold text-lg">F</div>
-              <span className="font-extrabold text-slate-900 text-xl tracking-tight">Food<span className="text-emerald-600">Express</span></span>
+            <div className="flex items-center gap-3">
+              <button onClick={() => setMenuOpen(!menuOpen)} className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 transition">
+                <svg className="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+
+              <div onClick={() => setCustomerTab('home')} className="flex items-center gap-2 cursor-pointer">
+                <div className="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-extrabold text-lg">F</div>
+                <span className="font-extrabold text-slate-900 text-xl tracking-tight hidden sm:inline">Food<span className="text-emerald-600">Express</span></span>
+              </div>
             </div>
 
             <div className="flex-1 max-w-md hidden sm:block">
@@ -239,17 +324,47 @@
             </div>
 
           </div>
+
+          {menuOpen && (
+            <div className="bg-white border-b border-slate-200 px-6 py-4 space-y-3 shadow-lg">
+              <div className="flex justify-between items-center border-b pb-2">
+                <span className="font-extrabold text-slate-900 text-sm">Navigation Menu</span>
+                <button onClick={() => setMenuOpen(false)} className="text-xs font-bold text-slate-400">✕ Close</button>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 text-xs font-bold">
+                <button onClick={() => { setCustomerTab('home'); setMenuOpen(false); }} className="p-2.5 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl text-left border flex items-center gap-2">
+                  <span>🔥</span> Offers (FOOD50)
+                </button>
+                <button onClick={() => { setVegOnlyFilter(!vegOnlyFilter); setMenuOpen(false); }} className={`p-2.5 rounded-xl text-left border flex items-center gap-2 ${vegOnlyFilter ? 'bg-emerald-600 text-white' : 'bg-slate-50 hover:bg-emerald-50'}`}>
+                  <span>🌱</span> {vegOnlyFilter ? 'All Dishes' : 'Pure Veg Filter'}
+                </button>
+                <button onClick={() => { setCustomerTab('tracking'); setMenuOpen(false); }} className="p-2.5 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl text-left border flex items-center gap-2">
+                  <span>📜</span> Re-Order
+                </button>
+                <button onClick={() => { setCustomerTab('delivery'); setMenuOpen(false); }} className="p-2.5 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl text-left border flex items-center gap-2">
+                  <span>🛵</span> Delivery Boy
+                </button>
+                <button onClick={() => { alert('Support: +91 9876543210'); setMenuOpen(false); }} className="p-2.5 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl text-left border flex items-center gap-2">
+                  <span>📞</span> Help Desk
+                </button>
+                <button onClick={() => { setCustomerTab('admin'); setMenuOpen(false); }} className="p-2.5 bg-slate-900 text-white rounded-xl text-left border flex items-center gap-2">
+                  <span>⚡</span> Admin Portal
+                </button>
+              </div>
+            </div>
+          )}
         </header>
       );
     };
 
     const CustomerHome = () => {
-      const { restaurants, products, setSelectedRest, setCustomerTab, selectedCategory, setSelectedCategory, addToCart, searchQuery } = useApp();
+      const { restaurants, products, setSelectedRest, setCustomerTab, selectedCategory, setSelectedCategory, vegOnlyFilter, addToCart, searchQuery, favorites, toggleFavorite } = useApp();
 
       const filteredProducts = products.filter(p => {
         const matchesCat = selectedCategory === 'All' || p.category === selectedCategory;
         const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesCat && matchesSearch;
+        const matchesVeg = !vegOnlyFilter || p.isVeg;
+        return matchesCat && matchesSearch && matchesVeg;
       });
 
       return (
@@ -305,8 +420,11 @@
             <h3 className="font-extrabold text-slate-900 text-lg">Trending Dishes</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProducts.map(p => (
-                <div key={p.id} className="bg-white rounded-2xl border border-slate-200 p-4 flex gap-4 items-center hover:shadow-md transition">
-                  <img src={p.image} className="w-24 h-24 rounded-xl object-cover" />
+                <div key={p.id} className="bg-white rounded-2xl border border-slate-200 p-4 flex gap-4 items-center hover:shadow-md transition relative">
+                  <img src={p.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80'} className="w-24 h-24 rounded-xl object-cover" />
+                  <button onClick={() => toggleFavorite(p.id)} className="absolute top-3 right-3 text-sm">
+                    {favorites.includes(p.id) ? '❤️' : '🤍'}
+                  </button>
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2">
                       <span className={`w-3 h-3 rounded-full ${p.isVeg ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
@@ -329,7 +447,27 @@
 
     const CartAndCheckout = () => {
       const { cart, updateCartQty, applyCoupon, couponCode, setCouponCode, subtotal, discountAmount, grandTotal, placeOrder } = useApp();
-      const [checkoutForm, setCheckoutForm] = useState({ name: '', mobile: '', address: '', payment: 'COD' });
+      const [checkoutForm, setCheckoutForm] = useState({ name: '', mobile: '', address: '', payment: 'COD', notes: '' });
+      const [locating, setLocating] = useState(false);
+
+      const detectGPS = () => {
+        if (!navigator.geolocation) {
+          alert("Geolocation support nahi hai browser me.");
+          return;
+        }
+        setLocating(true);
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const { latitude, longitude } = pos.coords;
+            setCheckoutForm(prev => ({ ...prev, address: `GPS: ${latitude.toFixed(4)}, ${longitude.toFixed(4)} (Auto Detected Address)` }));
+            setLocating(false);
+          },
+          () => {
+            alert("Location fetch karne me dikkat hui. Kripya manual address likhein.");
+            setLocating(false);
+          }
+        );
+      };
 
       if (cart.length === 0) {
         return (
@@ -341,6 +479,9 @@
         );
       }
 
+      const upiLink = `upi://pay?pa=${riyazahmad5@okaxis}&pn=FoodExpress&am=${grandTotal}&cu=INR`;
+      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(upiLink)}`;
+
       return (
         <div className="max-w-5xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
           
@@ -350,7 +491,7 @@
               {cart.map(({ product, qty }) => (
                 <div key={product.id} className="p-4 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <img src={product.image} className="w-14 h-14 rounded-xl object-cover" />
+                    <img src={product.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80'} className="w-14 h-14 rounded-xl object-cover" />
                     <div>
                       <h4 className="font-bold text-xs text-slate-900">{product.name}</h4>
                       <p className="text-xs font-semibold text-slate-500">₹{product.price}</p>
@@ -368,7 +509,7 @@
             <div className="bg-white rounded-2xl border border-slate-200 p-4 flex gap-2">
               <input 
                 type="text" 
-                placeholder="Coupon Code (e.g. FOOD50)" 
+                placeholder="Coupon Code (FOOD50)" 
                 value={couponCode}
                 onChange={e => setCouponCode(e.target.value)}
                 className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold uppercase"
@@ -390,16 +531,35 @@
                 <input required type="tel" value={checkoutForm.mobile} onChange={e => setCheckoutForm({...checkoutForm, mobile: e.target.value})} className="w-full border p-2.5 rounded-xl mt-1 font-medium" placeholder="9876543210" />
               </div>
               <div>
-                <label className="font-bold text-slate-700">Delivery Address</label>
+                <div className="flex justify-between items-center">
+                  <label className="font-bold text-slate-700">Delivery Address</label>
+                  <button type="button" onClick={detectGPS} className="text-[10px] font-extrabold text-emerald-600 hover:underline">
+                    {locating ? 'Locating...' : '📍 GPS Auto-Detect'}
+                  </button>
+                </div>
                 <textarea required value={checkoutForm.address} onChange={e => setCheckoutForm({...checkoutForm, address: e.target.value})} className="w-full border p-2.5 rounded-xl mt-1 font-medium" rows="2" placeholder="Full Address"></textarea>
               </div>
+
               <div>
-                <label className="font-bold text-slate-700">Payment Option</label>
+                <label className="font-bold text-slate-700">Special Instructions / Customization</label>
+                <input type="text" value={checkoutForm.notes} onChange={e => setCheckoutForm({...checkoutForm, notes: e.target.value})} className="w-full border p-2.5 rounded-xl mt-1 font-medium" placeholder="e.g. Less spicy, extra sauce" />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700">Payment Method</label>
                 <select value={checkoutForm.payment} onChange={e => setCheckoutForm({...checkoutForm, payment: e.target.value})} className="w-full border p-2.5 rounded-xl mt-1 font-bold bg-white">
                   <option value="COD">Cash on Delivery (COD)</option>
-                  <option value="UPI">Online Payment / UPI</option>
+                  <option value="UPI">Online Payment / Dynamic UPI QR</option>
                 </select>
               </div>
+
+              {checkoutForm.payment === 'UPI' && (
+                <div className="bg-slate-50 border p-3 rounded-xl text-center space-y-2">
+                  <p className="text-[11px] font-bold text-slate-600">Scan & Pay via GooglePay / PhonePe / Paytm:</p>
+                  <img src={qrCodeUrl} className="w-32 h-32 mx-auto border rounded-lg bg-white p-1" />
+                  <a href={upiLink} className="inline-block text-[11px] font-bold text-emerald-600 underline">Tap to Pay Directly on App</a>
+                </div>
+              )}
 
               <div className="border-t pt-3 space-y-1.5 text-xs text-slate-600">
                 <div className="flex justify-between"><span>Subtotal</span><span>₹{subtotal}</span></div>
@@ -417,105 +577,314 @@
     };
 
     const LiveTrackingView = () => {
-      const { activeOrdersList, setCustomerTab, fetchOrderByMobile } = useApp();
+      const { activeOrdersList, setCustomerTab, fetchOrderByMobile, cancelOrder } = useApp();
       const [inputMobile, setInputMobile] = useState('');
       const [loading, setLoading] = useState(false);
       const [errorMsg, setErrorMsg] = useState('');
+      const [ratings, setRatings] = useState({});
 
       const handleSearch = (e) => {
         e.preventDefault();
         if (!inputMobile || inputMobile.length < 10) {
-          setErrorMsg('❌ Kripya sahi 10-digit mobile number enter karein!');
+          setErrorMsg('❌ Kripya 10-digit mobile number enter karein!');
           return;
         }
         setLoading(true);
         setErrorMsg('');
         fetchOrderByMobile(inputMobile)
-          .then(res => {
-            if (!res.success) {
-              setErrorMsg(res.message);
-            }
-          })
+          .then(res => { if (!res.success) setErrorMsg(res.message); })
           .finally(() => setLoading(false));
+      };
+
+      const handlePrint = () => { window.print(); };
+
+      const shareToWhatsApp = (order) => {
+        const text = `Order Details:\nID: ${order.orderId}\nItems: ${order.items}\nTotal: ₹${order.totalAmount}\nStatus: ${order.status}`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
       };
 
       return (
         <div className="max-w-md mx-auto py-8 px-4 space-y-6">
           
-          {/* Mobile Search Box */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-xs">
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-xs no-print">
             <h4 className="font-extrabold text-slate-900 text-sm">🔍 Track Order by Mobile Number</h4>
             <form onSubmit={handleSearch} className="flex gap-2">
               <input 
                 type="tel" 
-                placeholder="Enter 10-digit Mobile No." 
+                placeholder="Enter Mobile No." 
                 value={inputMobile}
                 onChange={e => setInputMobile(e.target.value)}
                 className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500"
               />
-              <button type="submit" disabled={loading} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-700 disabled:opacity-50">
+              <button type="submit" disabled={loading} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-700">
                 {loading ? 'Searching...' : 'Search'}
               </button>
             </form>
 
-            {/* Error Message Display */}
-            {errorMsg && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-center">
-                <p className="text-xs font-bold text-red-600">{errorMsg}</p>
-              </div>
-            )}
+            {errorMsg && <p className="text-xs font-bold text-red-600 text-center">{errorMsg}</p>}
           </div>
 
-          {/* Active Orders List */}
-          {activeOrdersList && activeOrdersList.length > 0 ? (
+          {activeOrdersList && activeOrdersList.length > 0 && (
             <div className="space-y-6">
-              <p className="text-xs font-bold text-slate-500 text-center">Found {activeOrdersList.length} Order(s) for this number</p>
-              
               {activeOrdersList.map((order, idx) => (
-                <div key={order.orderId || idx} className="bg-white border border-slate-200 rounded-2xl p-6 space-y-6 shadow-sm">
+                <div key={order.orderId || idx} className="printable-receipt bg-white border border-slate-200 rounded-2xl p-6 space-y-6 shadow-sm">
                   <div className="text-center space-y-1">
-                    <span className="text-[11px] font-extrabold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">{order.orderId}</span>
-                    <h3 className="font-extrabold text-lg text-slate-900">Live Order Tracking</h3>
-                    <p className="text-[11px] text-slate-400">Status updates automatically from Google Sheet</p>
+                    <div className="flex justify-between items-center text-[11px] font-bold text-slate-400 border-b pb-2">
+                      <span>Date: {order.date}</span>
+                      <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{order.orderId}</span>
+                    </div>
+                    <h3 className="font-extrabold text-lg text-slate-900 pt-2">Live Order Tracking</h3>
+                    <p className="text-xs font-bold text-orange-600 bg-orange-50 inline-block px-3 py-1 rounded-full">{order.eta}</p>
                   </div>
 
-                  {/* Status Stepper */}
-                  <div className="space-y-4 text-xs font-bold pt-2">
-                    {[
-                      { step: 1, label: 'Order Placed', desc: 'Received and saved to system' },
-                      { step: 2, label: 'Preparing', desc: 'Kitchen is preparing your order' },
-                      { step: 3, label: 'On the Way', desc: 'Rider is carrying your food' },
-                      { step: 4, label: 'Delivered', desc: 'Food delivered successfully' },
-                    ].map(s => (
-                      <div key={s.step} className="flex gap-4 items-center">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs text-white ${order.statusStep >= s.step ? 'bg-emerald-600 font-extrabold' : 'bg-slate-200 text-slate-400'}`}>
-                          {s.step}
-                        </div>
-                        <div>
+                  {order.status !== 'Cancelled' && (
+                    <div className="space-y-4 text-xs font-bold pt-2">
+                      {[
+                        { step: 1, label: 'Order Placed' },
+                        { step: 2, label: 'Preparing' },
+                        { step: 3, label: 'On the Way' },
+                        { step: 4, label: 'Delivered' },
+                      ].map(s => (
+                        <div key={s.step} className="flex gap-4 items-center">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs text-white ${order.statusStep >= s.step ? 'bg-emerald-600 font-extrabold' : 'bg-slate-200 text-slate-400'}`}>
+                            {s.step}
+                          </div>
                           <p className={order.statusStep >= s.step ? 'text-slate-900 font-bold' : 'text-slate-400'}>{s.label}</p>
-                          <p className="text-[10px] text-slate-400 font-normal">{s.desc}</p>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
 
-                  {/* Customer Details */}
                   <div className="border-t pt-4 text-xs text-slate-600 space-y-1">
                     <p><strong>Customer:</strong> {order.name} ({order.mobile})</p>
-                    <p><strong>Items:</strong> {Array.isArray(order.items) ? order.items.join(', ') : order.items}</p>
+                    <p><strong>Items:</strong> {order.items}</p>
                     <p><strong>Address:</strong> {order.address}</p>
-                    <p><strong>Total Paid:</strong> ₹{order.totalAmount}</p>
+                    {order.notes && <p className="text-orange-600"><strong>Note:</strong> {order.notes}</p>}
+                    <p><strong>Total:</strong> ₹{order.totalAmount}</p>
+                  </div>
+
+                  {order.status === 'Delivered' && (
+                    <div className="border-t pt-3 space-y-2 text-center no-print">
+                      <p className="text-xs font-bold text-slate-700">Rate your meal:</p>
+                      <div className="flex justify-center gap-2 text-lg">
+                        {[1, 2, 3, 4, 5].map(star => (
+                          <button key={star} onClick={() => { setRatings({...ratings, [order.orderId]: star}); alert("Thank you for your rating!"); }}>
+                            {star <= (ratings[order.orderId] || 0) ? '⭐' : '☆'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="no-print space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <button onClick={handlePrint} className="py-2 bg-slate-900 text-white font-bold rounded-xl text-xs">🖨️ Print</button>
+                      <button onClick={() => shareToWhatsApp(order)} className="py-2 bg-emerald-600 text-white font-bold rounded-xl text-xs">💬 Share</button>
+                    </div>
+
+                    {order.status === 'Order Placed' && (
+                      <button onClick={() => cancelOrder(order.orderId)} className="w-full py-2 bg-red-50 text-red-600 border border-red-200 font-bold rounded-xl text-xs">
+                        🚫 Cancel Order
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
+            </div>
+          )}
 
-              <button onClick={() => setCustomerTab('home')} className="w-full py-2.5 bg-slate-100 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-200">
-                ← Back to Main Menu
-              </button>
+        </div>
+      );
+    };
+
+    const DeliveryView = () => {
+      const [allOrders, setAllOrders] = useState([]);
+
+      useEffect(() => {
+        fetch(`${GOOGLE_SHEET_URL}?action=GET_ALL_ORDERS`)
+          .then(res => res.json())
+          .then(data => { if (data && data.success) setAllOrders(data.orders.filter(o => o.status !== 'Delivered' && o.status !== 'Cancelled')); });
+      }, []);
+
+      return (
+        <div className="max-w-md mx-auto py-8 px-4 space-y-4">
+          <h3 className="font-extrabold text-xl text-slate-900">🛵 Delivery Partner Portal</h3>
+          <p className="text-xs text-slate-500">Active deliveries assigned to you.</p>
+
+          <div className="space-y-4">
+            {allOrders.map(order => (
+              <div key={order.orderId} className="bg-white border rounded-2xl p-4 space-y-3 shadow-xs">
+                <div className="flex justify-between items-center text-xs font-bold">
+                  <span className="text-emerald-600">{order.orderId}</span>
+                  <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">{order.status}</span>
+                </div>
+                <div className="text-xs space-y-1 text-slate-700">
+                  <p><strong>Customer:</strong> {order.name}</p>
+                  <p><strong>Phone:</strong> <a href={`tel:${order.mobile}`} className="text-blue-600 underline">{order.mobile}</a></p>
+                  <p><strong>Address:</strong> {order.address}</p>
+                  <p><strong>Payment:</strong> {order.paymentMethod} (₹{order.totalAmount})</p>
+                </div>
+                <a 
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`} 
+                  target="_blank" 
+                  className="block text-center py-2 bg-emerald-600 text-white font-bold rounded-xl text-xs"
+                >
+                  🗺️ Navigate on Google Maps
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    };
+
+    // Complete Admin Dashboard + Add Dish Form
+    const AdminView = () => {
+      const { addNewProduct, loadProducts } = useApp();
+      const [allOrders, setAllOrders] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [activeTab, setActiveTab] = useState('orders'); // 'orders' or 'add_item'
+
+      const [newDish, setNewDish] = useState({
+        name: '', price: '', category: 'Pizza', isVeg: true, image: '', desc: ''
+      });
+
+      const fetchAdminOrders = () => {
+        setLoading(true);
+        fetch(`${GOOGLE_SHEET_URL}?action=GET_ALL_ORDERS`)
+          .then(res => res.json())
+          .then(data => { if (data && data.success) setAllOrders(data.orders); })
+          .finally(() => setLoading(false));
+      };
+
+      useEffect(() => { fetchAdminOrders(); }, []);
+
+      const updateStatus = (orderId, newStatus) => {
+        fetch(GOOGLE_SHEET_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: "UPDATE_STATUS", orderId, status: newStatus })
+        }).then(() => {
+          setAllOrders(prev => prev.map(o => o.orderId === orderId ? { ...o, status: newStatus } : o));
+          alert(`Status updated to: ${newStatus}`);
+        });
+      };
+
+      const handleAddDishSubmit = (e) => {
+        e.preventDefault();
+        const prodData = {
+          id: 'p-' + Date.now(),
+          name: newDish.name,
+          price: Number(newDish.price),
+          category: newDish.category,
+          isVeg: Boolean(newDish.isVeg),
+          image: newDish.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80',
+          desc: newDish.desc
+        };
+        addNewProduct(prodData);
+        setNewDish({ name: '', price: '', category: 'Pizza', isVeg: true, image: '', desc: '' });
+      };
+
+      const totalRevenue = allOrders.filter(o => o.status !== 'Cancelled').reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
+      const activeOrdersCount = allOrders.filter(o => o.status !== 'Delivered' && o.status !== 'Cancelled').length;
+
+      return (
+        <div className="max-w-4xl mx-auto py-8 px-4 space-y-6">
+          <div className="flex justify-between items-center border-b pb-4">
+            <h3 className="font-extrabold text-xl text-slate-900">⚡ Admin Dashboard</h3>
+            <div className="flex gap-2">
+              <button onClick={() => setActiveTab('orders')} className={`px-3 py-1.5 rounded-xl text-xs font-bold ${activeTab === 'orders' ? 'bg-slate-900 text-white' : 'bg-slate-100'}`}>Orders</button>
+              <button onClick={() => setActiveTab('add_item')} className={`px-3 py-1.5 rounded-xl text-xs font-bold ${activeTab === 'add_item' ? 'bg-slate-900 text-white' : 'bg-slate-100'}`}>+ Add Food Item</button>
+            </div>
+          </div>
+
+          {activeTab === 'orders' ? (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-center">
+                <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl">
+                  <p className="text-[10px] font-extrabold text-emerald-600 uppercase">Total Revenue</p>
+                  <p className="text-xl font-black text-emerald-900">₹{totalRevenue}</p>
+                </div>
+                <div className="bg-orange-50 border border-orange-200 p-4 rounded-2xl">
+                  <p className="text-[10px] font-extrabold text-orange-600 uppercase">Active Orders</p>
+                  <p className="text-xl font-black text-orange-900">{activeOrdersCount}</p>
+                </div>
+                <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl col-span-2 sm:col-span-1">
+                  <p className="text-[10px] font-extrabold text-slate-600 uppercase">Total Orders</p>
+                  <p className="text-xl font-black text-slate-900">{allOrders.length}</p>
+                </div>
+              </div>
+
+              {loading ? (
+                <p className="text-center text-xs font-bold text-slate-400 py-8">Loading All Orders...</p>
+              ) : (
+                <div className="space-y-4">
+                  {allOrders.map(order => (
+                    <div key={order.orderId} className="bg-white border rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="text-xs space-y-1">
+                        <span className="font-bold text-emerald-600">{order.orderId}</span> - <span className="text-slate-400">{order.date}</span>
+                        <p className="font-bold text-slate-900">{order.name} ({order.mobile})</p>
+                        <p className="text-slate-500">{order.items} - ₹{order.totalAmount}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-500">Status:</span>
+                        <select 
+                          value={order.status} 
+                          onChange={e => updateStatus(order.orderId, e.target.value)}
+                          className="border text-xs font-bold rounded-xl px-3 py-1.5 bg-slate-50 outline-none"
+                        >
+                          <option value="Order Placed">Order Placed</option>
+                          <option value="Preparing">Preparing</option>
+                          <option value="On the Way">On the Way</option>
+                          <option value="Delivered">Delivered</option>
+                          <option value="Cancelled">Cancelled</option>
+                        </select>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
-            <div className="text-center py-8 text-xs text-slate-400 font-medium">
-              Apna mobile number enter karke Search par click karein.
+            <div className="bg-white border rounded-2xl p-6 max-w-lg mx-auto space-y-4">
+              <h4 className="font-bold text-slate-900 text-sm">🍲 Add New Dish to Google Sheet Products</h4>
+              <form onSubmit={handleAddDishSubmit} className="space-y-3 text-xs">
+                <div>
+                  <label className="font-bold">Dish Name</label>
+                  <input required type="text" value={newDish.name} onChange={e => setNewDish({...newDish, name: e.target.value})} className="w-full border p-2.5 rounded-xl mt-1 font-medium" placeholder="e.g. Paneer Tikka" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold">Price (₹)</label>
+                    <input required type="number" value={newDish.price} onChange={e => setNewDish({...newDish, price: e.target.value})} className="w-full border p-2.5 rounded-xl mt-1 font-medium" placeholder="199" />
+                  </div>
+                  <div>
+                    <label className="font-bold">Category</label>
+                    <select value={newDish.category} onChange={e => setNewDish({...newDish, category: e.target.value})} className="w-full border p-2.5 rounded-xl mt-1 font-bold bg-white">
+                      {INITIAL_CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="font-bold">Veg / Non-Veg</label>
+                  <select value={newDish.isVeg} onChange={e => setNewDish({...newDish, isVeg: e.target.value === 'true'})} className="w-full border p-2.5 rounded-xl mt-1 font-bold bg-white">
+                    <option value="true">🌱 Pure Veg (isVeg = true)</option>
+                    <option value="false">🍖 Non-Veg (isVeg = false)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-bold">Image URL</label>
+                  <input type="url" value={newDish.image} onChange={e => setNewDish({...newDish, image: e.target.value})} className="w-full border p-2.5 rounded-xl mt-1 font-medium" placeholder="https://..." />
+                </div>
+                <div>
+                  <label className="font-bold">Description</label>
+                  <textarea value={newDish.desc} onChange={e => setNewDish({...newDish, desc: e.target.value})} className="w-full border p-2.5 rounded-xl mt-1 font-medium" rows="2" placeholder="Dish details..."></textarea>
+                </div>
+                <button type="submit" className="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl text-xs hover:bg-emerald-700">
+                  Save Dish to Google Sheet Products
+                </button>
+              </form>
             </div>
           )}
 
@@ -533,6 +902,8 @@
             {customerTab === 'home' && <CustomerHome />}
             {customerTab === 'cart' && <CartAndCheckout />}
             {customerTab === 'tracking' && <LiveTrackingView />}
+            {customerTab === 'delivery' && <DeliveryView />}
+            {customerTab === 'admin' && <AdminView />}
           </main>
         </div>
       );
