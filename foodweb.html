@@ -345,7 +345,7 @@
           Swal.fire({
             icon: 'success',
             title: 'Dish Added!',
-            text: 'New dish added to Google Sheet & Menu!',
+            text: 'New dish added to Products & Menu!',
             confirmButtonColor: '#059669'
           });
         });
@@ -1119,7 +1119,7 @@
                   <textarea value={newDish.desc} onChange={e => setNewDish({...newDish, desc: e.target.value})} className="w-full border p-2.5 rounded-xl mt-1 font-medium" rows="2" placeholder="Dish details..."></textarea>
                 </div>
                 <button type="submit" className="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl text-xs hover:bg-emerald-700">
-                  Save Dish to Google Sheet Products
+                  Upload Dish to Products
                 </button>
               </form>
             </div>
