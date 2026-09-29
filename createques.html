@@ -26,17 +26,6 @@
     .form-group input { padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
     .full-width { grid-column: span 2; }
 
-    .section-counts {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
-      background: #f8f9fa;
-      padding: 10px;
-      border-radius: 6px;
-      border: 1px solid #e9ecef;
-      margin-bottom: 12px;
-    }
-
     .btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
     .btn { padding: 8px 14px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; display: inline-flex; align-items: center; gap: 5px; }
     .btn-primary { background: #004085; color: white; }
@@ -45,7 +34,7 @@
     .btn:hover { opacity: 0.9; }
 
     #fileInput { display: none; }
-    #imagePreview { max-height: 80px; display: none; margin-top: 8px; border-radius: 4px; border: 1px solid #ddd; }
+    #imagePreview { max-height: 100px; display: none; margin-top: 10px; border-radius: 4px; border: 1px solid #ddd; }
 
     /* Paper Styling */
     .paper-container {
@@ -104,42 +93,18 @@
         <label>Time</label>
         <input type="text" id="inputTime" value="2 hrs.">
       </div>
-      <div class="form-group full-width">
-        <label>Topic Name / Chapter Name</label>
-        <input type="text" id="inputPrompt" value="Cell: The Unit of Life">
-      </div>
-    </div>
-
-    <label style="font-size: 12px; font-weight: bold; font-family: 'Segoe UI';">Question Quantities (Dynamic):</label>
-    <div class="section-counts">
-      <div class="form-group">
-        <label>MCQs</label>
-        <input type="number" id="countMcq" value="5" min="0">
-      </div>
-      <div class="form-group">
-        <label>Fill Blanks</label>
-        <input type="number" id="countFill" value="5" min="0">
-      </div>
-      <div class="form-group">
-        <label>Short Qs</label>
-        <input type="number" id="countShort" value="7" min="0">
-      </div>
-      <div class="form-group">
-        <label>Long Qs</label>
-        <input type="number" id="countLong" value="5" min="0">
-      </div>
     </div>
 
     <div class="btn-group">
-      <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">📷 / 🖼️ Upload Image / Handwritten Qs</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">📷 / 🖼️ Upload Handwritten Question Image</button>
       <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)">
       
-      <button class="btn btn-primary" onclick="generateQuestionPaper()">⚡ Generate Paper with AI</button>
+      <button class="btn btn-primary" onclick="generateQuestionPaper()">⚡ Convert Image to Paper</button>
       <button class="btn btn-success" onclick="printOrSavePDF()">🖨️ Print / Save as PDF</button>
     </div>
 
     <img id="imagePreview" alt="Uploaded Content Preview">
-    <div id="loading" class="loading-spinner">⏳ AI Generating Unique Questions... Please wait</div>
+    <div id="loading" class="loading-spinner">⏳ Reading handwritten text and generating questions... Please wait</div>
   </div>
 
   <div class="paper-container" id="paperArea">
@@ -158,7 +123,9 @@
 
     <div class="instruction">All questions are compulsory.</div>
 
-    <div id="questionsOutput"></div>
+    <div id="questionsOutput">
+      <p style="text-align: center; color: #666; font-style: italic;">Handwritten photo upload karke "Convert Image to Paper" par click karein.</p>
+    </div>
   </div>
 
 <script>
@@ -192,61 +159,37 @@
   async function generateQuestionPaper() {
     syncHeaderInfo();
 
-    const subject = document.getElementById('inputSubject').value;
-    const className = document.getElementById('inputClass').value;
-    const topicPrompt = document.getElementById('inputPrompt').value;
-    
-    const numMcq = parseInt(document.getElementById('countMcq').value) || 0;
-    const numFill = parseInt(document.getElementById('countFill').value) || 0;
-    const numShort = parseInt(document.getElementById('countShort').value) || 0;
-    const numLong = parseInt(document.getElementById('countLong').value) || 0;
+    if (!base64Image) {
+      alert("Kripya pehle handwritten question ki image upload karein!");
+      return;
+    }
 
     const loading = document.getElementById('loading');
     loading.style.display = 'block';
 
-    let systemPrompt = "";
-    let userPrompt = "";
+    const systemPrompt = `You are a handwritten exam paper digitizer. 
+Read the handwritten/printed image carefully and extract ALL questions EXACTLY as written.
+Output ONLY raw HTML format without markdown or code blocks.
 
-    // Agar Image uploaded hai toh special instructions bhejna
-    if (base64Image) {
-      systemPrompt = `You are an examination question paper extractor and generator.
-Output ONLY raw HTML with no code block markdown.
-You will be provided an image containing handwritten or printed questions.
-Your task is to transcribe and format all questions present in the image cleanly into HTML.
-Structure them with appropriate section headers (e.g., SECTION A, SECTION B) and correct question numbering (Q1, Q2, ...).
-Maintain MCQ options structure using:
-<div class="question-item">Q1. Question text
-  <div class="mcq-options">
-    <div>(a) Option 1</div><div>(b) Option 2</div>
-    <div>(c) Option 3</div><div>(d) Option 4</div>
+Formatting requirements:
+- Wrap each question in: <div class="question-item">Q1. Question Text</div>
+- If sections exist in handwriting (e.g. Section A, Section B), use: <div class="section-title">SECTION NAME</div>
+- If there are MCQs, format them like:
+  <div class="question-item">Q1. Question text
+    <div class="mcq-options">
+      <div>(a) Option 1</div><div>(b) Option 2</div>
+      <div>(c) Option 3</div><div>(d) Option 4</div>
+    </div>
   </div>
-</div>`;
+- Correct bad spelling or grammatical mistakes if present in handwriting, but keep questions accurate.`;
 
-      userPrompt = `Please read the attached image carefully and convert all handwritten/printed questions into well-formatted HTML for Class: ${className}, Subject: ${subject}. Fix spelling mistakes or grammatical errors in the handwritten text if needed.`;
-    } else {
-      systemPrompt = `You are an examination question generator.
-Output ONLY raw HTML with no code block markdown.
-Subject: "${subject}", Topic: "${topicPrompt}".
-
-Ensure every question in each section is distinct and relevant to "${topicPrompt}".
-Never repeat any fill-in-the-blank or question wording.
-
-Sections required:
-${numMcq > 0 ? `<div class="section-title">SECTION A: MULTIPLE CHOICE QUESTIONS</div> (${numMcq} MCQs)` : ''}
-${numFill > 0 ? `<div class="section-title">SECTION B: FILL IN THE BLANKS</div> (${numFill} unique questions)` : ''}
-${numShort > 0 ? `<div class="section-title">SECTION C: SHORT ANSWER QUESTIONS</div> (${numShort} questions)` : ''}
-${numLong > 0 ? `<div class="section-title">SECTION D: LONG ANSWER QUESTIONS</div> (${numLong} questions)` : ''}
-
-Numbering must be continuous Q1 to Q${numMcq + numFill + numShort + numLong}.`;
-
-      userPrompt = `Create exam questions for Class: ${className}, Subject: ${subject}, Topic: ${topicPrompt}. Quantities: MCQs=${numMcq}, FillBlanks=${numFill}, Short=${numShort}, Long=${numLong}`;
-    }
+    const userPrompt = `Extract all questions from this handwritten paper image and format them in clean HTML.`;
 
     try {
-      const parts = [{ text: userPrompt }];
-      if (base64Image) {
-        parts.push({ inline_data: { mime_type: imageMimeType, data: base64Image } });
-      }
+      const parts = [
+        { text: userPrompt },
+        { inline_data: { mime_type: imageMimeType, data: base64Image } }
+      ];
 
       const payload = {
         system_instruction: { parts: [{ text: systemPrompt }] },
@@ -268,125 +211,24 @@ Numbering must be continuous Q1 to Q${numMcq + numFill + numShort + numLong}.`;
         textOutput = data.candidates[0].content.parts[0].text;
       }
 
-      if (textOutput && textOutput.trim().length > 20) {
+      if (textOutput && textOutput.trim().length > 10) {
         let formattedHTML = textOutput.replace(/```html/g, '').replace(/```/g, '').trim();
         document.getElementById('questionsOutput').innerHTML = formattedHTML;
       } else {
-        generateSubjectAwareFallback(subject, topicPrompt, numMcq, numFill, numShort, numLong);
+        document.getElementById('questionsOutput').innerHTML = "<p style='color:red;'>Image ko sahi se padha nahi ja saka. Kripya saaf photo upload karein.</p>";
       }
     } catch (err) {
-      console.warn("AI generation offline/timed out. Rendering dynamic fallback.", err);
-      generateSubjectAwareFallback(subject, topicPrompt, numMcq, numFill, numShort, numLong);
+      console.error("API Error:", err);
+      alert("Error: Handwritten image processing me problem aayi. Connection check karein.");
     } finally {
       loading.style.display = 'none';
     }
-  }
-
-  // Dynamic Multi-Subject Fallback Generator with Varied Questions
-  function generateSubjectAwareFallback(subject, topic, mcqCount, fillCount, shortCount, longCount) {
-    let qNum = 1;
-    let html = "";
-    const isBioOrScience = /bio|science|chem|phys|botany|zoology/i.test(subject);
-
-    const mcqPool = isBioOrScience ? [
-      { q: `Which organelle is known as the powerhouse or primary functional unit in ${topic}?`, opts: ["(a) Mitochondria", "(b) Chloroplast", "(c) Nucleus", "(d) Ribosome"] },
-      { q: `What is the key chemical component or structural framework of ${topic}?`, opts: ["(a) Phospholipid bilayer", "(b) Cellulose", "(c) Chitin", "(d) Peptidoglycan"] },
-      { q: `Which molecule serves as the direct energy carrier during metabolic activities in ${topic}?`, opts: ["(a) ATP", "(b) DNA", "(c) RNA", "(d) Glucose"] },
-      { q: `Which structure regulates selective transport across ${topic}?`, opts: ["(a) Plasma membrane", "(b) Cell wall", "(c) Endoplasmic Reticulum", "(d) Lysosome"] },
-      { q: `The process of protein synthesis in ${topic} primarily takes place on:`, opts: ["(a) Ribosomes", "(b) Golgi body", "(c) Vacuole", "(d) Peroxisome"] }
-    ] : [
-      { q: `Identify the primary usage or rule associated with ${topic}:`, opts: ["(a) Option A", "(b) Option B", "(c) Option C", "(d) Option D"] },
-      { q: `Which of the following correctly describes ${topic}?`, opts: ["(a) Type 1", "(b) Type 2", "(c) Type 3", "(d) Type 4"] },
-      { q: `Choose the correct option for ${topic}:`, opts: ["(a) Rule 1", "(b) Rule 2", "(c) Rule 3", "(d) Rule 4"] }
-    ];
-
-    const fillPool = isBioOrScience ? [
-      `The outer covering that provides rigidity and protection in ${topic} is called ____________.`,
-      `The fluid matrix occupying the inner space of ${topic} is known as ____________.`,
-      `Genetic material responsible for heredity in ${topic} is contained inside the ____________.`,
-      `Specialized enzymes for intracellular digestion in ${topic} are stored in ____________.`,
-      `The process of cellular division responsible for growth in ${topic} is ____________.`,
-      `In ${topic}, energy synthesis via aerobic respiration occurs within ____________.`
-    ] : [
-      `The primary function of ${topic} is to ____________.`,
-      `In standard grammar/mathematics, ${topic} is classified under ____________.`,
-      `The fundamental rule governing ${topic} states that ____________.`,
-      `An essential characteristic feature of ${topic} is ____________.`,
-      `When applying ${topic}, the resulting outcome is ____________.`
-    ];
-
-    const shortPool = isBioOrScience ? [
-      `Explain the key structural components and importance of ${topic}.`,
-      `Differentiate between Prokaryotic and Eukaryotic structures related to ${topic}.`,
-      `Describe the fluid mosaic model or membrane transport in ${topic}.`,
-      `What is the role of Nucleus and Ribosomes in ${topic}?`,
-      `Summarize the major differences between plant and animal ${topic}.`,
-      `Explain how ${topic} maintains homeostatic regulation.`
-    ] : [
-      `Define ${topic} with two suitable examples.`,
-      `Explain the key rules and exceptions associated with ${topic}.`,
-      `Differentiate between main types of ${topic}.`,
-      `Give five examples illustrating the application of ${topic}.`
-    ];
-
-    const longPool = isBioOrScience ? [
-      `Describe the detailed structure of ${topic} with a neat, well-labeled diagram.`,
-      `Elaborate on the function of various membrane-bound organelles involved in ${topic}.`,
-      `Discuss cell division (Mitosis vs Meiosis) and its significance in relation to ${topic}.`,
-      `Explain transport mechanisms (Passive diffusion vs Active transport) across ${topic}.`
-    ] : [
-      `Write a comprehensive essay/note on ${topic} covering all its classifications and examples.`,
-      `Discuss in detail the application and importance of ${topic} with structured examples.`
-    ];
-
-    if (mcqCount > 0) {
-      html += `<div class="section-title">SECTION A: MULTIPLE CHOICE QUESTIONS</div>`;
-      for (let i = 0; i < mcqCount; i++) {
-        let item = mcqPool[i % mcqPool.length];
-        html += `<div class="question-item">Q${qNum++}. ${item.q}
-          <div class="mcq-options">
-            <div>${item.opts[0]}</div><div>${item.opts[1]}</div>
-            <div>${item.opts[2]}</div><div>${item.opts[3]}</div>
-          </div>
-        </div>`;
-      }
-    }
-
-    if (fillCount > 0) {
-      html += `<div class="section-title">SECTION B: FILL IN THE BLANKS</div>`;
-      for (let i = 0; i < fillCount; i++) {
-        let sentence = fillPool[i % fillPool.length];
-        html += `<div class="question-item">Q${qNum++}. ${sentence}</div>`;
-      }
-    }
-
-    if (shortCount > 0) {
-      html += `<div class="section-title">SECTION C: SHORT ANSWER QUESTIONS</div>`;
-      for (let i = 0; i < shortCount; i++) {
-        let text = shortPool[i % shortPool.length];
-        html += `<div class="question-item">Q${qNum++}. ${text}</div>`;
-      }
-    }
-
-    if (longCount > 0) {
-      html += `<div class="section-title">SECTION D: LONG ANSWER QUESTIONS</div>`;
-      for (let i = 0; i < longCount; i++) {
-        let text = longPool[i % longPool.length];
-        html += `<div class="question-item">Q${qNum++}. ${text}</div>`;
-      }
-    }
-
-    document.getElementById('questionsOutput').innerHTML = html;
   }
 
   function printOrSavePDF() {
     syncHeaderInfo();
     window.print();
   }
-
-  window.onload = function() {
-    generateQuestionPaper();
-  };
 </script>
 
 </body>
