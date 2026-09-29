@@ -3,166 +3,282 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Interactive DNA Helix Visualizer - Biology Tech</title>
+  <title>3D Human Anatomy Engine - Zoology Teaching Portal</title>
+  
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body { background: #0b0f19; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow: hidden; }
+    body { background: #0d1117; color: #fff; overflow: hidden; }
 
-    h1 { font-size: 22px; margin-bottom: 5px; color: #00d2ff; text-align: center; }
-    p { font-size: 13px; color: #8a99ad; margin-bottom: 15px; text-align: center; }
+    /* Canvas Area */
+    #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
 
-    .sim-container {
-      position: relative;
-      background: #111827;
-      border: 2px solid #1f293d;
+    /* Sidebar UI Controls */
+    .anatomy-panel {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 10;
+      width: 320px;
+      background: rgba(22, 27, 34, 0.85);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 12px;
-      box-shadow: 0 10px 30px rgba(0,210,255,0.15);
-      padding: 10px;
+      padding: 18px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
     }
 
-    canvas { border-radius: 8px; background: #080c14; cursor: pointer; display: block; }
+    h2 { font-size: 18px; color: #58a6ff; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+    p.subtitle { font-size: 12px; color: #8b949e; margin-bottom: 15px; }
 
-    .controls {
+    .system-btn {
+      width: 100%;
+      padding: 10px 14px;
+      margin-bottom: 8px;
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      color: #c9d1d9;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
       display: flex;
-      gap: 15px;
-      justify-content: center;
-      margin-top: 15px;
-      background: #1f293d;
-      padding: 10px 20px;
-      border-radius: 30px;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.2s ease;
     }
 
-    .control-group { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: bold; }
-    .control-group input[type="range"] { accent-color: #00d2ff; cursor: pointer; }
+    .system-btn:hover { background: #30363d; border-color: #58a6ff; color: #58a6ff; }
+    .system-btn.active { background: #1f6feb; border-color: #58a6ff; color: #ffffff; }
 
-    .legend {
-      display: flex;
-      gap: 12px;
-      margin-top: 12px;
-      font-size: 11px;
+    /* Info Card for Clicked Organs */
+    .info-card {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      z-index: 10;
+      width: 350px;
+      background: rgba(22, 27, 34, 0.9);
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 16px;
+      display: none;
     }
-    .legend-item { display: flex; align-items: center; gap: 4px; }
-    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+    .info-card h3 { color: #3fb950; font-size: 16px; margin-bottom: 6px; }
+    .info-card p { font-size: 12px; color: #c9d1d9; line-height: 1.4; }
+
+    .loading-screen {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 20;
+      font-size: 16px;
+      color: #58a6ff;
+      font-weight: bold;
+    }
   </style>
+
+  <!-- Three.js & OrbitControls WebGL Engine -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
 
-  <h1>🧬 Interactive DNA Double Helix Simulator</h1>
-  <p>Pure JS HTML5 Canvas Engine • Class 11/12 Molecular Genetics Teaching Tool</p>
+  <div id="loading" class="loading-screen">⏳ 3D Human Anatomy Engine Loading...</div>
 
-  <div class="sim-container">
-    <canvas id="dnaCanvas" width="650" height="380"></canvas>
-    
-    <div class="controls">
-      <div class="control-group">
-        <label>Rotation Speed:</label>
-        <input type="range" id="speedSlider" min="1" max="10" value="3">
-      </div>
-      <div class="control-group">
-        <label>Base Pair Density:</label>
-        <input type="range" id="densitySlider" min="10" max="40" value="22">
-      </div>
-    </div>
+  <!-- Sidebar Control Panel -->
+  <div class="anatomy-panel">
+    <h2>🫀 Human Anatomy 3D</h2>
+    <p class="subtitle">Class 11/12 Physiology Interactive Explorer</p>
+
+    <button class="system-btn active" onclick="switchSystem('skeletal')">
+      💀 Skeletal System <span>Bones</span>
+    </button>
+    <button class="system-btn" onclick="switchSystem('circulatory')">
+      ❤️ Circulatory System <span>Heart & Vessels</span>
+    </button>
+    <button class="system-btn" onclick="switchSystem('nervous')">
+      🧠 Nervous System <span>Brain & Axons</span>
+    </button>
+    <button class="system-btn" onclick="switchSystem('digestive')">
+      🧪 Digestive System <span>Stomach & Intestine</span>
+    </button>
   </div>
 
-  <div class="legend">
-    <div class="legend-item"><span class="dot" style="background:#ff4757;"></span> Adenine (A)</div>
-    <div class="legend-item"><span class="dot" style="background:#2ed573;"></span> Thymine (T)</div>
-    <div class="legend-item"><span class="dot" style="background:#ffa502;"></span> Guanine (G)</div>
-    <div class="legend-item"><span class="dot" style="background:#1e90ff;"></span> Cytosine (C)</div>
+  <!-- Info Box for Anatomy Topics -->
+  <div class="info-card" id="infoCard">
+    <h3 id="organTitle">Organ Name</h3>
+    <p id="organDesc">Click on any structure or select system from menu.</p>
   </div>
+
+  <div id="canvas-container"></div>
 
 <script>
-  const canvas = document.getElementById('dnaCanvas');
-  const ctx = canvas.getContext('2d');
+  let scene, camera, renderer, controls;
+  let currentGroup;
 
-  let angle = 0;
-  let speed = 0.03;
-  let numPairs = 22;
-
-  // Base pair colors (A-T, G-C)
-  const colors = {
-    A: '#ff4757',
-    T: '#2ed573',
-    G: '#ffa502',
-    C: '#1e90ff'
+  // Organ Descriptions Dataset
+  const organData = {
+    skeletal: {
+      title: "Human Skeletal System (206 Bones)",
+      desc: "Provides structural framework, protects internal organs, and produces blood cells via Bone Marrow."
+    },
+    circulatory: {
+      title: "Cardiovascular System",
+      desc: "Consists of 4-chambered Heart, Arteries, and Veins. Pumps oxygenated blood to tissues and carries deoxygenated blood back."
+    },
+    nervous: {
+      title: "Central & Peripheral Nervous System",
+      desc: "Controls voluntary and involuntary actions. Composed of Brain, Spinal Cord, and Neuron Networks."
+    },
+    digestive: {
+      title: "Gastrointestinal Tract",
+      desc: "Breaks down food mechanically and chemically (Esophagus, Stomach, Small & Large Intestine) for nutrient absorption."
+    }
   };
 
-  const bases = [
-    { b1: 'A', b2: 'T', c1: colors.A, c2: colors.T },
-    { b1: 'G', b2: 'C', c1: colors.G, c2: colors.C },
-    { b1: 'T', b2: 'A', c1: colors.T, c2: colors.A },
-    { b1: 'C', b2: 'G', c1: colors.C, c2: colors.G }
-  ];
+  function init() {
+    const container = document.getElementById('canvas-container');
 
-  function drawDNA() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // 1. Scene Setup
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0d1117);
 
-    const startX = 60;
-    const endX = canvas.width - 60;
-    const centerY = canvas.height / 2;
-    const amplitude = 70; // Helix height wave
-    const spacing = (endX - startX) / numPairs;
+    // 2. Camera Setup
+    camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 0, 8);
 
-    for (let i = 0; i < numPairs; i++) {
-      const currentAngle = angle + (i * 0.3);
-      const x = startX + (i * spacing);
+    // 3. Renderer Setup
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    container.appendChild(renderer.domElement);
 
-      // Trigonometric position calculation for 3D depth simulation
-      const y1 = centerY + Math.sin(currentAngle) * amplitude;
-      const y2 = centerY - Math.sin(currentAngle) * amplitude;
+    // 4. Lighting Setup (3D Depth)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(ambientLight);
 
-      const z1 = Math.cos(currentAngle); // Used for scale & depth perspective
-      const radius1 = 6 + z1 * 3;
-      const radius2 = 6 - z1 * 3;
+    const dirLight1 = new THREE.DirectionalLight(0x58a6ff, 0.8);
+    dirLight1.position.set(5, 10, 7);
+    scene.add(dirLight1);
 
-      const baseData = bases[i % bases.length];
+    const dirLight2 = new THREE.DirectionalLight(0xff7b72, 0.5);
+    dirLight2.position.set(-5, -5, -5);
+    scene.add(dirLight2);
 
-      // Draw Hydrogen Bonds (Connecting Line between Base Pairs)
-      ctx.beginPath();
-      ctx.moveTo(x, y1);
-      ctx.lineTo(x, centerY);
-      ctx.strokeStyle = baseData.c1;
-      ctx.lineWidth = 2.5;
-      ctx.globalAlpha = 0.7;
-      ctx.stroke();
+    // 5. Orbit Controls (Mouse/Touch Drag, Zoom, Rotate)
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
 
-      ctx.beginPath();
-      ctx.moveTo(x, centerY);
-      ctx.lineTo(x, y2);
-      ctx.strokeStyle = baseData.c2;
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
+    // Load Default Skeletal System Geometry
+    currentGroup = new THREE.Group();
+    scene.add(currentGroup);
+    buildSkeletalMesh();
 
-      // Draw Sugar-Phosphate Backbone Nodes (Strand 1)
-      ctx.globalAlpha = 1;
-      ctx.beginPath();
-      ctx.arc(x, y1, Math.max(2, radius1), 0, Math.PI * 2);
-      ctx.fillStyle = z1 > 0 ? '#00d2ff' : '#005580';
-      ctx.fill();
+    document.getElementById('loading').style.display = 'none';
 
-      // Draw Sugar-Phosphate Backbone Nodes (Strand 2)
-      ctx.beginPath();
-      ctx.arc(x, y2, Math.max(2, radius2), 0, Math.PI * 2);
-      ctx.fillStyle = z1 < 0 ? '#00d2ff' : '#005580';
-      ctx.fill();
-    }
+    // Window Resize Handler
+    window.addEventListener('resize', onWindowResize);
 
-    angle += speed;
-    requestAnimationFrame(drawDNA);
+    // Render Loop
+    animate();
   }
 
-  // Event Listeners for Live Controls
-  document.getElementById('speedSlider').addEventListener('input', (e) => {
-    speed = e.target.value * 0.01;
-  });
+  // Generate Procedural 3D Mesh Models
+  function buildSkeletalMesh() {
+    clearGroup();
+    
+    // Spine / Axial Column
+    const spineGeo = new THREE.CylinderGeometry(0.15, 0.15, 3.5, 16);
+    const boneMat = new THREE.MeshStandardMaterial({ color: 0xe6edf3, roughness: 0.3 });
+    const spine = new THREE.Mesh(spineGeo, boneMat);
+    currentGroup.add(spine);
 
-  document.getElementById('densitySlider').addEventListener('input', (e) => {
-    numPairs = parseInt(e.target.value);
-  });
+    // Skull
+    const skullGeo = new THREE.SphereGeometry(0.6, 32, 32);
+    const skull = new THREE.Mesh(skullGeo, boneMat);
+    skull.position.y = 2.1;
+    currentGroup.add(skull);
 
-  // Start Animation Loop
-  drawDNA();
+    // Ribcage
+    for(let i=0; i<6; i++) {
+      const ribGeo = new THREE.TorusGeometry(0.7 - (i*0.05), 0.04, 8, 24, Math.PI);
+      const rib = new THREE.Mesh(ribGeo, boneMat);
+      rib.position.y = 1.2 - (i * 0.25);
+      rib.rotation.x = Math.PI / 2;
+      currentGroup.add(rib);
+    }
+  }
+
+  function buildCirculatoryMesh() {
+    clearGroup();
+
+    // Heart 3D Mesh
+    const heartGeo = new THREE.SphereGeometry(0.5, 16, 16);
+    const heartMat = new THREE.MeshStandardMaterial({ color: 0xff3b30, roughness: 0.2 });
+    const heart = new THREE.Mesh(heartGeo, heartMat);
+    heart.position.set(0.1, 0.8, 0.1);
+    currentGroup.add(heart);
+
+    // Blood Vessels Network (Aorta & Vena Cava)
+    const vesselMatRed = new THREE.MeshStandardMaterial({ color: 0xff453a });
+    const vesselMatBlue = new THREE.MeshStandardMaterial({ color: 0x0a84ff });
+
+    const aortaGeo = new THREE.CylinderGeometry(0.08, 0.08, 3.8, 12);
+    const aorta = new THREE.Mesh(aortaGeo, vesselMatRed);
+    aorta.position.x = -0.15;
+    currentGroup.add(aorta);
+
+    const venaCava = new THREE.Mesh(aortaGeo, vesselMatBlue);
+    venaCava.position.x = 0.25;
+    currentGroup.add(venaCava);
+  }
+
+  function clearGroup() {
+    while(currentGroup.children.length > 0){ 
+      const obj = currentGroup.children[0];
+      currentGroup.remove(obj); 
+    }
+  }
+
+  function switchSystem(systemKey) {
+    // Update Active Button UI
+    document.querySelectorAll('.system-btn').forEach(btn => btn.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+
+    // Render Geometry according to System
+    if(systemKey === 'skeletal') buildSkeletalMesh();
+    else if(systemKey === 'circulatory') buildCirculatoryMesh();
+    else if(systemKey === 'nervous' || systemKey === 'digestive') buildSkeletalMesh(); // Expandable
+
+    // Update Info Card
+    const data = organData[systemKey];
+    const infoCard = document.getElementById('infoCard');
+    document.getElementById('organTitle').innerText = data.title;
+    document.getElementById('organDesc').innerText = data.desc;
+    infoCard.style.display = 'block';
+  }
+
+  function animate() {
+    requestAnimationFrame(animate);
+    
+    // Slow Auto-Rotation for 3D showcase
+    if(currentGroup) {
+      currentGroup.rotation.y += 0.005;
+    }
+
+    controls.update();
+    renderer.render(scene, camera);
+  }
+
+  function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  }
+
+  window.onload = init;
 </script>
 </body>
 </html>
