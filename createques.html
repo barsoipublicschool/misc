@@ -3,10 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Question Paper Generator - Barsoi Public School</title>
-  
-  <!-- Tesseract OCR Library for extracting image text -->
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <title>Gemini AI Question Paper Generator - Barsoi Public School</title>
 
   <style>
     * { box-sizing: border-box; font-family: 'Times New Roman', Times, serif; }
@@ -22,22 +19,31 @@
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
-    .control-panel h2 { margin-top: 0; color: #004085; font-size: 18px; }
+    .control-panel h2 { margin-top: 0; color: #004085; font-size: 18px; display: flex; align-items: center; gap: 8px; }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
     .form-group { display: flex; flex-direction: column; }
     .form-group label { font-size: 12px; font-weight: bold; margin-bottom: 3px; }
-    .form-group input { padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+    .form-group input, .form-group textarea { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; font-family: inherit; }
     .full-width { grid-column: span 2; }
 
+    .gemini-box {
+      background: #f0f4f9;
+      border: 1.5px solid #004085;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+    .gemini-box label { display: block; font-weight: bold; font-size: 13px; color: #004085; margin-bottom: 5px; }
+
     .btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-    .btn { padding: 8px 14px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; display: inline-flex; align-items: center; gap: 5px; }
+    .btn { padding: 9px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
     .btn-primary { background: #004085; color: white; }
     .btn-success { background: #28a745; color: white; }
     .btn-secondary { background: #6c757d; color: white; }
     .btn:hover { opacity: 0.9; }
 
     #fileInput { display: none; }
-    #imagePreview { max-height: 100px; display: none; margin-top: 10px; border-radius: 4px; border: 1px solid #ddd; }
+    #imagePreview { max-height: 80px; display: none; margin-top: 8px; border-radius: 4px; border: 1px solid #ddd; }
 
     /* Paper Styling */
     .paper-container {
@@ -73,8 +79,9 @@
 <body>
 
   <div class="control-panel">
-    <h2>🎯 Question Paper Generator Settings</h2>
+    <h2>✨ Google Gemini Question Paper Generator</h2>
     
+    <!-- Paper Heading Details -->
     <div class="form-grid">
       <div class="form-group full-width">
         <label>Exam Name (Center Title)</label>
@@ -98,16 +105,22 @@
       </div>
     </div>
 
-    <div class="btn-group">
-      <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">📷 / 🖼️ Upload Handwritten Question Image</button>
-      <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)">
-      
-      <button class="btn btn-primary" onclick="generateQuestionPaper()">⚡ Convert Image to Paper</button>
-      <button class="btn btn-success" onclick="printOrSavePDF()">🖨️ Print / Save as PDF</button>
+    <!-- Google Gemini Custom Prompt Search Box -->
+    <div class="gemini-box">
+      <label for="geminiPrompt">🔍 Google Gemini AI Search Box / Prompt Input:</label>
+      <textarea id="geminiPrompt" rows="3" placeholder="Yahan likhein aapko kaisa paper chahiye, e.g., 'Generate 5 MCQs, 5 Short Questions and 2 Long Questions for Class 11 Biology topic Cell: The Unit of Life' YA handwritten image upload karke likhein 'Convert this image to question paper'"></textarea>
     </div>
 
-    <img id="imagePreview" alt="Uploaded Content Preview">
-    <div id="loading" class="loading-spinner">⏳ OCR Processing image and formatting paper... Please wait</div>
+    <div class="btn-group">
+      <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">📷 Upload Handwritten Image (Optional)</button>
+      <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)">
+      
+      <button class="btn btn-primary" onclick="generateWithGemini()">✨ Ask Gemini to Generate Paper</button>
+      <button class="btn btn-success" onclick="printOrSavePDF()">🖨️ Print / Save PDF</button>
+    </div>
+
+    <img id="imagePreview" alt="Uploaded Preview">
+    <div id="loading" class="loading-spinner">⏳ Gemini AI is generating your question paper... Please wait</div>
   </div>
 
   <div class="paper-container" id="paperArea">
@@ -127,20 +140,22 @@
     <div class="instruction">All questions are compulsory.</div>
 
     <div id="questionsOutput">
-      <p style="text-align: center; color: #666; font-style: italic;">Handwritten photo upload karke "Convert Image to Paper" par click karein.</p>
+      <p style="text-align: center; color: #666; font-style: italic;">Gemini Search Box me instructions likhein aur "Ask Gemini to Generate Paper" par click karein.</p>
     </div>
   </div>
 
 <script>
   const WORKER_URL = "https://barsoi-ai-proxy.barsoipublicschool26.workers.dev/";
-  let selectedFile = null;
+  let base64Image = null;
+  let imageMimeType = "image/jpeg";
 
   function handleFileSelect(event) {
     const file = event.target.files[0];
     if (file) {
-      selectedFile = file;
+      imageMimeType = file.type || "image/jpeg";
       const reader = new FileReader();
       reader.onload = function(e) {
+        base64Image = e.target.result.split(',')[1];
         const preview = document.getElementById('imagePreview');
         preview.src = e.target.result;
         preview.style.display = 'block';
@@ -157,55 +172,44 @@
     document.getElementById('dispSubject').innerText = document.getElementById('inputSubject').value;
   }
 
-  async function generateQuestionPaper() {
+  async function generateWithGemini() {
     syncHeaderInfo();
 
-    if (!selectedFile) {
-      alert("Kripya pehle handwritten question ki image upload karein!");
+    const customPrompt = document.getElementById('geminiPrompt').value.trim();
+    if (!customPrompt && !base64Image) {
+      alert("Kripya Gemini Search Box me prompt likhein ya pehle image upload karein!");
       return;
     }
 
     const loading = document.getElementById('loading');
     loading.style.display = 'block';
 
+    const systemPrompt = `You are Google Gemini AI Question Paper Generator.
+Output ONLY raw clean HTML content with NO code block markdown syntax (\`\`\`html).
+
+Formatting Rules:
+1. Wrap each question inside: <div class="question-item">Q1. Question text</div>
+2. Wrap section headings inside: <div class="section-title">SECTION NAME</div>
+3. For Multiple Choice Questions, format like this:
+   <div class="question-item">Q1. Question text
+     <div class="mcq-options">
+       <div>(a) Option 1</div><div>(b) Option 2</div>
+       <div>(c) Option 3</div><div>(d) Option 4</div>
+     </div>
+   </div>
+4. Maintain proper sequential numbering (Q1, Q2, Q3...).`;
+
+    const userQuery = customPrompt || "Read the image and generate a complete formatted question paper.";
+
     try {
-      // Step 1: Use Tesseract OCR to convert Image to raw text
-      loading.innerText = "⏳ Step 1/2: Photo se text read kiya ja raha hai (OCR)...";
-      
-      const { data: { text } } = await Tesseract.recognize(
-        selectedFile,
-        'eng'
-      );
-
-      if (!text || text.trim().length < 5) {
-        throw new Error("OCR Read Failed");
+      const parts = [{ text: userQuery }];
+      if (base64Image) {
+        parts.push({ inline_data: { mime_type: imageMimeType, data: base64Image } });
       }
-
-      // Step 2: Send extracted text to AI for formatting HTML
-      loading.innerText = "⏳ Step 2/2: Text ko Question Paper HTML me format kiya ja raha hai...";
-
-      const systemPrompt = `You are an examination question paper formatter.
-Output ONLY raw HTML with no code block markdown.
-You are given raw text extracted from a handwritten paper. Clean up spellings, grammar, and arrange questions into clean HTML format.
-
-Formatting structure required:
-- Every question must be in: <div class="question-item">Q1. Question text</div>
-- If sections are detected (e.g., Section A, Section B), wrap them in: <div class="section-title">SECTION NAME</div>
-- If MCQ options exist, wrap options like:
-  <div class="question-item">Q1. Question text
-    <div class="mcq-options">
-      <div>(a) Option 1</div><div>(b) Option 2</div>
-      <div>(c) Option 3</div><div>(d) Option 4</div>
-    </div>
-  </div>`;
-
-      const userPrompt = `Here is the raw OCR text extracted from the handwritten sheet. Please format it properly into clean HTML question paper:
-
-${text}`;
 
       const payload = {
         system_instruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ parts: [{ text: userPrompt }] }]
+        contents: [{ parts: parts }]
       };
 
       const response = await fetch(WORKER_URL, {
@@ -214,25 +218,24 @@ ${text}`;
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) throw new Error("Worker Response Error");
+      if (!response.ok) throw new Error("API Proxy Error");
 
-      const resData = await response.json();
+      const data = await response.json();
       let textOutput = "";
 
-      if (resData.candidates && resData.candidates[0].content.parts[0].text) {
-        textOutput = resData.candidates[0].content.parts[0].text;
+      if (data.candidates && data.candidates[0].content.parts[0].text) {
+        textOutput = data.candidates[0].content.parts[0].text;
       }
 
       if (textOutput && textOutput.trim().length > 10) {
         let formattedHTML = textOutput.replace(/```html/g, '').replace(/```/g, '').trim();
         document.getElementById('questionsOutput').innerHTML = formattedHTML;
       } else {
-        throw new Error("AI formatting failed");
+        alert("Gemini AI response empty aaya. Kripya dusra prompt try karein.");
       }
-
     } catch (err) {
       console.error(err);
-      alert("Note: OCR/AI processing me dikkat aayi. Photo ki lighting aur handwriting clear hone par better result milega.");
+      alert("Worker/API Error: Please check your internet connection or Cloudflare Worker setup.");
     } finally {
       loading.style.display = 'none';
     }
