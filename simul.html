@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive DNA Helix Visualizer - Biology Tech</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background: #0b0f19; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow: hidden; }
+
+    h1 { font-size: 22px; margin-bottom: 5px; color: #00d2ff; text-align: center; }
+    p { font-size: 13px; color: #8a99ad; margin-bottom: 15px; text-align: center; }
+
+    .sim-container {
+      position: relative;
+      background: #111827;
+      border: 2px solid #1f293d;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,210,255,0.15);
+      padding: 10px;
+    }
+
+    canvas { border-radius: 8px; background: #080c14; cursor: pointer; display: block; }
+
+    .controls {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      margin-top: 15px;
+      background: #1f293d;
+      padding: 10px 20px;
+      border-radius: 30px;
+    }
+
+    .control-group { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: bold; }
+    .control-group input[type="range"] { accent-color: #00d2ff; cursor: pointer; }
+
+    .legend {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+      font-size: 11px;
+    }
+    .legend-item { display: flex; align-items: center; gap: 4px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  </style>
+</head>
+<body>
+
+  <h1>🧬 Interactive DNA Double Helix Simulator</h1>
+  <p>Pure JS HTML5 Canvas Engine • Class 11/12 Molecular Genetics Teaching Tool</p>
+
+  <div class="sim-container">
+    <canvas id="dnaCanvas" width="650" height="380"></canvas>
+    
+    <div class="controls">
+      <div class="control-group">
+        <label>Rotation Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="3">
+      </div>
+      <div class="control-group">
+        <label>Base Pair Density:</label>
+        <input type="range" id="densitySlider" min="10" max="40" value="22">
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><span class="dot" style="background:#ff4757;"></span> Adenine (A)</div>
+    <div class="legend-item"><span class="dot" style="background:#2ed573;"></span> Thymine (T)</div>
+    <div class="legend-item"><span class="dot" style="background:#ffa502;"></span> Guanine (G)</div>
+    <div class="legend-item"><span class="dot" style="background:#1e90ff;"></span> Cytosine (C)</div>
+  </div>
+
+<script>
+  const canvas = document.getElementById('dnaCanvas');
+  const ctx = canvas.getContext('2d');
+
+  let angle = 0;
+  let speed = 0.03;
+  let numPairs = 22;
+
+  // Base pair colors (A-T, G-C)
+  const colors = {
+    A: '#ff4757',
+    T: '#2ed573',
+    G: '#ffa502',
+    C: '#1e90ff'
+  };
+
+  const bases = [
+    { b1: 'A', b2: 'T', c1: colors.A, c2: colors.T },
+    { b1: 'G', b2: 'C', c1: colors.G, c2: colors.C },
+    { b1: 'T', b2: 'A', c1: colors.T, c2: colors.A },
+    { b1: 'C', b2: 'G', c1: colors.C, c2: colors.G }
+  ];
+
+  function drawDNA() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const startX = 60;
+    const endX = canvas.width - 60;
+    const centerY = canvas.height / 2;
+    const amplitude = 70; // Helix height wave
+    const spacing = (endX - startX) / numPairs;
+
+    for (let i = 0; i < numPairs; i++) {
+      const currentAngle = angle + (i * 0.3);
+      const x = startX + (i * spacing);
+
+      // Trigonometric position calculation for 3D depth simulation
+      const y1 = centerY + Math.sin(currentAngle) * amplitude;
+      const y2 = centerY - Math.sin(currentAngle) * amplitude;
+
+      const z1 = Math.cos(currentAngle); // Used for scale & depth perspective
+      const radius1 = 6 + z1 * 3;
+      const radius2 = 6 - z1 * 3;
+
+      const baseData = bases[i % bases.length];
+
+      // Draw Hydrogen Bonds (Connecting Line between Base Pairs)
+      ctx.beginPath();
+      ctx.moveTo(x, y1);
+      ctx.lineTo(x, centerY);
+      ctx.strokeStyle = baseData.c1;
+      ctx.lineWidth = 2.5;
+      ctx.globalAlpha = 0.7;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(x, centerY);
+      ctx.lineTo(x, y2);
+      ctx.strokeStyle = baseData.c2;
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // Draw Sugar-Phosphate Backbone Nodes (Strand 1)
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      ctx.arc(x, y1, Math.max(2, radius1), 0, Math.PI * 2);
+      ctx.fillStyle = z1 > 0 ? '#00d2ff' : '#005580';
+      ctx.fill();
+
+      // Draw Sugar-Phosphate Backbone Nodes (Strand 2)
+      ctx.beginPath();
+      ctx.arc(x, y2, Math.max(2, radius2), 0, Math.PI * 2);
+      ctx.fillStyle = z1 < 0 ? '#00d2ff' : '#005580';
+      ctx.fill();
+    }
+
+    angle += speed;
+    requestAnimationFrame(drawDNA);
+  }
+
+  // Event Listeners for Live Controls
+  document.getElementById('speedSlider').addEventListener('input', (e) => {
+    speed = e.target.value * 0.01;
+  });
+
+  document.getElementById('densitySlider').addEventListener('input', (e) => {
+    numPairs = parseInt(e.target.value);
+  });
+
+  // Start Animation Loop
+  drawDNA();
+</script>
+</body>
+</html>
