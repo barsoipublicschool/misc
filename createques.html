@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gemini AI Question Paper Generator - Barsoi Public School</title>
+  <title>Question Paper Generator - Barsoi Public School</title>
 
   <style>
     * { box-sizing: border-box; font-family: 'Times New Roman', Times, serif; }
@@ -19,7 +19,7 @@
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
-    .control-panel h2 { margin-top: 0; color: #004085; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+    .control-panel h2 { margin-top: 0; color: #004085; font-size: 18px; }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
     .form-group { display: flex; flex-direction: column; }
     .form-group label { font-size: 12px; font-weight: bold; margin-bottom: 3px; }
@@ -81,7 +81,6 @@
   <div class="control-panel">
     <h2>✨ Google Gemini Question Paper Generator</h2>
     
-    <!-- Paper Heading Details -->
     <div class="form-grid">
       <div class="form-group full-width">
         <label>Exam Name (Center Title)</label>
@@ -89,7 +88,7 @@
       </div>
       <div class="form-group">
         <label>Class</label>
-        <input type="text" id="inputClass" value="Class - XI">
+        <input type="text" id="inputClass" value="Class -9th">
       </div>
       <div class="form-group">
         <label>Subject</label>
@@ -105,14 +104,13 @@
       </div>
     </div>
 
-    <!-- Google Gemini Custom Prompt Search Box -->
     <div class="gemini-box">
       <label for="geminiPrompt">🔍 Google Gemini AI Search Box / Prompt Input:</label>
-      <textarea id="geminiPrompt" rows="3" placeholder="Yahan likhein aapko kaisa paper chahiye, e.g., 'Generate 5 MCQs, 5 Short Questions and 2 Long Questions for Class 11 Biology topic Cell: The Unit of Life' YA handwritten image upload karke likhein 'Convert this image to question paper'"></textarea>
+      <textarea id="geminiPrompt" rows="3" placeholder="Handwritten image upload karein aur yahan likhein: 'Convert this handwritten image into exam paper'"></textarea>
     </div>
 
     <div class="btn-group">
-      <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">📷 Upload Handwritten Image (Optional)</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">📷 Upload Handwritten Image</button>
       <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)">
       
       <button class="btn btn-primary" onclick="generateWithGemini()">✨ Ask Gemini to Generate Paper</button>
@@ -133,7 +131,7 @@
     </div>
 
     <div class="meta-row">
-      <span><span id="dispClass">Class - XI</span></span>
+      <span><span id="dispClass">Class -9th</span></span>
       <span>Subject - <span id="dispSubject">Science (Biology)</span></span>
     </div>
 
@@ -177,40 +175,43 @@
 
     const customPrompt = document.getElementById('geminiPrompt').value.trim();
     if (!customPrompt && !base64Image) {
-      alert("Kripya Gemini Search Box me prompt likhein ya pehle image upload karein!");
+      alert("Kripya pehle handwritten image upload karein ya prompt box me instructions likhein!");
       return;
     }
 
     const loading = document.getElementById('loading');
     loading.style.display = 'block';
 
-    const systemPrompt = `You are Google Gemini AI Question Paper Generator.
-Output ONLY raw clean HTML content with NO code block markdown syntax (\`\`\`html).
+    const promptText = `Convert all questions from the prompt or uploaded handwritten sheet into clean HTML question paper format.
+Output strictly raw HTML only without \`\`\`html wrapper.
 
-Formatting Rules:
-1. Wrap each question inside: <div class="question-item">Q1. Question text</div>
-2. Wrap section headings inside: <div class="section-title">SECTION NAME</div>
-3. For Multiple Choice Questions, format like this:
+HTML Formatting rules:
+1. Each question: <div class="question-item">Q1. Question text</div>
+2. Section header: <div class="section-title">SECTION NAME</div>
+3. MCQ Options:
    <div class="question-item">Q1. Question text
      <div class="mcq-options">
        <div>(a) Option 1</div><div>(b) Option 2</div>
        <div>(c) Option 3</div><div>(d) Option 4</div>
      </div>
    </div>
-4. Maintain proper sequential numbering (Q1, Q2, Q3...).`;
 
-    const userQuery = customPrompt || "Read the image and generate a complete formatted question paper.";
+User Request: ${customPrompt || "Extract all handwritten questions and format them."}`;
 
     try {
-      const parts = [{ text: userQuery }];
+      let contents = [];
       if (base64Image) {
-        parts.push({ inline_data: { mime_type: imageMimeType, data: base64Image } });
+        contents = [{
+          parts: [
+            { text: promptText },
+            { inline_data: { mime_type: imageMimeType, data: base64Image } }
+          ]
+        }];
+      } else {
+        contents = [{ parts: [{ text: promptText }] }];
       }
 
-      const payload = {
-        system_instruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ parts: parts }]
-      };
+      const payload = { contents: contents };
 
       const response = await fetch(WORKER_URL, {
         method: 'POST',
@@ -218,24 +219,29 @@ Formatting Rules:
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) throw new Error("API Proxy Error");
+      if (!response.ok) throw new Error("Server HTTP Error: " + response.status);
 
       const data = await response.json();
       let textOutput = "";
 
-      if (data.candidates && data.candidates[0].content.parts[0].text) {
-        textOutput = data.candidates[0].content.parts[0].text;
+      // Smart extraction for different Gemini API response wrappers
+      if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
+        textOutput = data.candidates[0].content.parts.map(p => p.text || '').join('\n');
+      } else if (data.text) {
+        textOutput = data.text;
+      } else if (typeof data === 'string') {
+        textOutput = data;
       }
 
-      if (textOutput && textOutput.trim().length > 10) {
+      if (textOutput && textOutput.trim().length > 5) {
         let formattedHTML = textOutput.replace(/```html/g, '').replace(/```/g, '').trim();
         document.getElementById('questionsOutput').innerHTML = formattedHTML;
       } else {
-        alert("Gemini AI response empty aaya. Kripya dusra prompt try karein.");
+        alert("Server se empty response mila. Worker me API key check karein ya direct text prompt type karke try karein.");
       }
     } catch (err) {
       console.error(err);
-      alert("Worker/API Error: Please check your internet connection or Cloudflare Worker setup.");
+      alert("Error: Worker connection me problem hai. " + err.message);
     } finally {
       loading.style.display = 'none';
     }
