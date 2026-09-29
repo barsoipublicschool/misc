@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Question Paper Generator - Barsoi Public School</title>
+  
+  <!-- Tesseract OCR Library for extracting image text -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
   <style>
     * { box-sizing: border-box; font-family: 'Times New Roman', Times, serif; }
@@ -104,7 +107,7 @@
     </div>
 
     <img id="imagePreview" alt="Uploaded Content Preview">
-    <div id="loading" class="loading-spinner">⏳ Reading handwritten text and generating questions... Please wait</div>
+    <div id="loading" class="loading-spinner">⏳ OCR Processing image and formatting paper... Please wait</div>
   </div>
 
   <div class="paper-container" id="paperArea">
@@ -130,16 +133,14 @@
 
 <script>
   const WORKER_URL = "https://barsoi-ai-proxy.barsoipublicschool26.workers.dev/";
-  let base64Image = null;
-  let imageMimeType = "image/jpeg";
+  let selectedFile = null;
 
   function handleFileSelect(event) {
     const file = event.target.files[0];
     if (file) {
-      imageMimeType = file.type || "image/jpeg";
+      selectedFile = file;
       const reader = new FileReader();
       reader.onload = function(e) {
-        base64Image = e.target.result.split(',')[1];
         const preview = document.getElementById('imagePreview');
         preview.src = e.target.result;
         preview.style.display = 'block';
@@ -159,7 +160,7 @@
   async function generateQuestionPaper() {
     syncHeaderInfo();
 
-    if (!base64Image) {
+    if (!selectedFile) {
       alert("Kripya pehle handwritten question ki image upload karein!");
       return;
     }
@@ -167,33 +168,44 @@
     const loading = document.getElementById('loading');
     loading.style.display = 'block';
 
-    const systemPrompt = `You are a handwritten exam paper digitizer. 
-Read the handwritten/printed image carefully and extract ALL questions EXACTLY as written.
-Output ONLY raw HTML format without markdown or code blocks.
+    try {
+      // Step 1: Use Tesseract OCR to convert Image to raw text
+      loading.innerText = "⏳ Step 1/2: Photo se text read kiya ja raha hai (OCR)...";
+      
+      const { data: { text } } = await Tesseract.recognize(
+        selectedFile,
+        'eng'
+      );
 
-Formatting requirements:
-- Wrap each question in: <div class="question-item">Q1. Question Text</div>
-- If sections exist in handwriting (e.g. Section A, Section B), use: <div class="section-title">SECTION NAME</div>
-- If there are MCQs, format them like:
+      if (!text || text.trim().length < 5) {
+        throw new Error("OCR Read Failed");
+      }
+
+      // Step 2: Send extracted text to AI for formatting HTML
+      loading.innerText = "⏳ Step 2/2: Text ko Question Paper HTML me format kiya ja raha hai...";
+
+      const systemPrompt = `You are an examination question paper formatter.
+Output ONLY raw HTML with no code block markdown.
+You are given raw text extracted from a handwritten paper. Clean up spellings, grammar, and arrange questions into clean HTML format.
+
+Formatting structure required:
+- Every question must be in: <div class="question-item">Q1. Question text</div>
+- If sections are detected (e.g., Section A, Section B), wrap them in: <div class="section-title">SECTION NAME</div>
+- If MCQ options exist, wrap options like:
   <div class="question-item">Q1. Question text
     <div class="mcq-options">
       <div>(a) Option 1</div><div>(b) Option 2</div>
       <div>(c) Option 3</div><div>(d) Option 4</div>
     </div>
-  </div>
-- Correct bad spelling or grammatical mistakes if present in handwriting, but keep questions accurate.`;
+  </div>`;
 
-    const userPrompt = `Extract all questions from this handwritten paper image and format them in clean HTML.`;
+      const userPrompt = `Here is the raw OCR text extracted from the handwritten sheet. Please format it properly into clean HTML question paper:
 
-    try {
-      const parts = [
-        { text: userPrompt },
-        { inline_data: { mime_type: imageMimeType, data: base64Image } }
-      ];
+${text}`;
 
       const payload = {
         system_instruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ parts: parts }]
+        contents: [{ parts: [{ text: userPrompt }] }]
       };
 
       const response = await fetch(WORKER_URL, {
@@ -202,24 +214,25 @@ Formatting requirements:
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) throw new Error("Worker Error");
+      if (!response.ok) throw new Error("Worker Response Error");
 
-      const data = await response.json();
+      const resData = await response.json();
       let textOutput = "";
 
-      if (data.candidates && data.candidates[0].content.parts[0].text) {
-        textOutput = data.candidates[0].content.parts[0].text;
+      if (resData.candidates && resData.candidates[0].content.parts[0].text) {
+        textOutput = resData.candidates[0].content.parts[0].text;
       }
 
       if (textOutput && textOutput.trim().length > 10) {
         let formattedHTML = textOutput.replace(/```html/g, '').replace(/```/g, '').trim();
         document.getElementById('questionsOutput').innerHTML = formattedHTML;
       } else {
-        document.getElementById('questionsOutput').innerHTML = "<p style='color:red;'>Image ko sahi se padha nahi ja saka. Kripya saaf photo upload karein.</p>";
+        throw new Error("AI formatting failed");
       }
+
     } catch (err) {
-      console.error("API Error:", err);
-      alert("Error: Handwritten image processing me problem aayi. Connection check karein.");
+      console.error(err);
+      alert("Note: OCR/AI processing me dikkat aayi. Photo ki lighting aur handwriting clear hone par better result milega.");
     } finally {
       loading.style.display = 'none';
     }
