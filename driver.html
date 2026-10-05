@@ -1,161 +1,188 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BPS Bus Driver - GPS Sender</title>
+    <title>BPS BUS TRACKING</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background-color: #f4f6f9;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 90vh;
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; height: 100vh; overflow: hidden; }
+        .header { background: #075E54; color: white; padding: 12px; text-align: center; font-weight: bold; z-index: 1001; position: relative; font-size: 18px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        #map { height: calc(100vh - 49px); width: 100%; z-index: 1; background: #f0f0f0; }
+        
+        .info-card { 
+            position: absolute; top: 65px; left: 15px; right: 15px; 
+            background: white; padding: 12px 15px; border-radius: 10px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 1000; 
+            border-left: 5px solid #075E54; display: flex; justify-content: space-between; align-items: center;
         }
-        .card {
-            background: white;
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            text-align: center;
-            width: 100%;
-            max-width: 350px;
+        
+        .geofence-tag {
+            font-size: 11px; font-weight: bold; margin-top: 4px; display: inline-block; padding: 2px 6px; border-radius: 4px;
         }
-        h2 { color: #075E54; margin-bottom: 20px; }
-        .btn {
-            background-color: #25D366;
-            color: white;
-            border: none;
-            padding: 15px 25px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 8px;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 10px;
-        }
-        .btn-stop { background-color: #d9534f; display: none; }
-        .status-box {
-            margin-top: 20px;
-            padding: 12px;
-            border-radius: 8px;
-            background: #eef2f5;
-            font-size: 14px;
-            text-align: left;
-        }
-        .data-label { font-weight: bold; color: #333; }
+        .inside-school { background-color: #e6f4ea; color: #137333; }
+        .outside-school { background-color: #fce8e6; color: #c5221f; }
+
+        .view-toggle { position: absolute; top: 160px; right: 15px; z-index: 1000; background: white; padding: 4px; border-radius: 8px; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);}
+        .view-toggle button { padding: 6px 10px; border: none; background: #f0f0f0; cursor: pointer; font-size: 11px; font-weight: bold; border-radius: 5px; }
+        .view-toggle button.active { background: #075E54; color: white; }
+        
+        .status-dot { height: 9px; width: 9px; background-color: #25D366; border-radius: 50%; display: inline-block; margin-right: 4px; animation: blink 1s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h2>🚌 Driver Location Sender</h2>
-    <p><b>Bus ID:</b> BUS-01</p>
-    
-    <button id="btnStart" class="btn" onclick="startTracking()">Start Tracking</button>
-    <button id="btnStop" class="btn btn-stop" onclick="stopTracking()">Stop Tracking</button>
+<div class="header">BARSOI PUBLIC SCHOOL - LIVE BUS TRACKER</div>
 
-    <div class="status-box">
-        <p><span class="data-label">Status:</span> <span id="statusText" style="color: gray;">Stopped</span></p>
-        <p><span class="data-label">Latitude:</span> <span id="latText">---</span></p>
-        <p><span class="data-label">Longitude:</span> <span id="lngText">---</span></p>
-        <p><span class="data-label">Speed:</span> <span id="speedText">0 km/h</span></p>
-        <p><span class="data-label">Last Sent:</span> <span id="timeText">---</span></p>
+<div class="info-card">
+    <div>
+        <b style="color:#075E54; font-size: 16px;" id="busName">🚌 BUS-01</b><br>
+        <small id="tm" style="color:gray;">Connecting...</small><br>
+        <span id="geofenceStatus" class="geofence-tag outside-school">Checking Location...</span>
+    </div>
+    <div style="text-align: right;">
+        <span id="sp" style="font-weight: bold; color: #333; font-size: 18px;">0 km/h</span><br>
+        <small id="liveText" style="color: #25D366;"><span class="status-dot"></span>Live</small>
     </div>
 </div>
 
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<div class="view-toggle">
+    <button id="btnNormal" class="active" onclick="switchMap('normal')">Normal</button>
+    <button id="btnSat" onclick="switchMap('sat')">Satellite</button>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-    // 1. Apne Firebase Project ki Config Details Yahan Badlein
-    const firebaseConfig = {
-        apiKey: "YOUR_API_KEY",
-        authDomain: "YOUR_PROJECT.firebaseapp.com",
-        databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-        projectId: "YOUR_PROJECT",
-        storageBucket: "YOUR_PROJECT.appspot.com",
-        messagingSenderId: "1234567890",
-        appId: "YOUR_APP_ID"
-    };
+    // App Script URL (Jo Android App me use ho raha hai)
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbysJpfOZTAmZ0NsvKn0MpRMnnRckXJ4to_ZAQDaxTsgHzxjW3Fqi0-Dr5gg0sfRolnG/exec"; 
 
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
-    
-    var watchId = null;
-    const BUS_ID = "BUS-01"; // Bus ID jisko database me update karna hai
+    // School Coordinates & Geofence Radius (Barsoi Public School)
+    const SCHOOL_LAT = 25.6127;
+    const SCHOOL_LNG = 85.1588;
+    const GEOFENCE_RADIUS_METERS = 500; // 500 Meters Radius
 
-    function startTracking() {
-        if ("geolocation" in navigator) {
-            document.getElementById('statusText').innerText = "Connecting GPS...";
-            document.getElementById('statusText').style.color = "orange";
+    var map, marker, normalLayer, satLayer, geofenceCircle;
+    var firstLoad = true;
 
-            // Device ke GPS coordinates continuous track karne ke liye options
-            const options = {
-                enableHighAccuracy: true, // Exact location ke liye High Accuracy GPS
-                maximumAge: 0,
-                timeout: 5000
-            };
-
-            watchId = navigator.geolocation.watchPosition(sendLocationToFirebase, handleError, options);
-
-            document.getElementById('btnStart').style.display = "none";
-            document.getElementById('btnStop').style.display = "block";
-        } else {
-            alert("Aapke phone me Geolocation support nahi hai!");
-        }
-    }
-
-    function sendLocationToFirebase(position) {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        // Speed m/s me aati hai, usko km/h me convert kiya hai ( speed * 3.6 )
-        const speedInKmhr = position.coords.speed ? Math.round(position.coords.speed * 3.6) : 0;
+    function initMap() {
+        map = L.map('map', { zoomControl: false }).setView([SCHOOL_LAT, SCHOOL_LNG], 15);
         
-        const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-        // Firebase Realtime Database me Data Push/Set
-        database.ref('buses/' + BUS_ID).set({
-            busId: BUS_ID,
-            lat: lat,
-            lng: lng,
-            speed: speedInKmhr,
-            time: currentTime
-        }).then(() => {
-            // UI Update
-            document.getElementById('statusText').innerText = "Live Tracking Active";
-            document.getElementById('statusText').style.color = "green";
-            document.getElementById('latText').innerText = lat.toFixed(6);
-            document.getElementById('lngText').innerText = lng.toFixed(6);
-            document.getElementById('speedText').innerText = speedInKmhr + " km/h";
-            document.getElementById('timeText').innerText = currentTime;
-        }).catch((err) => {
-            console.error("Firebase Error:", err);
-            document.getElementById('statusText').innerText = "Data Send Error";
-            document.getElementById('statusText').style.color = "red";
+        normalLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        satLayer = L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+            subdomains:['mt0','mt1','mt2','mt3'], maxZoom: 20
         });
+
+        var busIcon = L.icon({
+            iconUrl: 'https://cdn-icons-png.flaticon.com/512/1048/1048313.png',
+            iconSize: [40, 40], 
+            iconAnchor: [20, 20]
+        });
+
+        marker = L.marker([SCHOOL_LAT, SCHOOL_LNG], { icon: busIcon }).addTo(map);
+
+        // Map Par Red Boundary Circle (Geofence) Draw Karein
+        geofenceCircle = L.circle([SCHOOL_LAT, SCHOOL_LNG], {
+            color: '#d9534f',
+            fillColor: '#f03',
+            fillOpacity: 0.12,
+            radius: GEOFENCE_RADIUS_METERS
+        }).addTo(map);
+
+        fetchData();
+        setInterval(fetchData, 4000); // Har 4 second me location fetch karega
     }
 
-    function handleError(error) {
-        console.warn('GPS Error: ' + error.message);
-        document.getElementById('statusText').innerText = "GPS Permission Required";
-        document.getElementById('statusText').style.color = "red";
-    }
+    async function fetchData() {
+        try {
+            const response = await fetch(SCRIPT_URL);
+            const res = await response.json();
 
-    function stopTracking() {
-        if (watchId !== null) {
-            navigator.geolocation.clearWatch(watchId);
-            watchId = null;
+            if (!res || res.lat === "---" || res.lat === "" || parseFloat(res.lat) === 0) {
+                setOfflineUI();
+                return;
+            }
+
+            var lat = parseFloat(res.lat);
+            var lng = parseFloat(res.lng);
+            var newPos = [lat, lng];
+
+            // Speed display
+            let speedValue = res.speed.toString().toLowerCase();
+            document.getElementById('sp').innerText = speedValue.includes("km") ? speedValue : speedValue + " km/h";
+
+            // Time & Bus Name
+            document.getElementById('tm').innerText = "Last Update: " + (res.time || "Just Now");
+            document.getElementById('busName').innerText = "🚌 " + (res.busId || "BUS-01");
+            
+            // Live Status UI
+            document.getElementById('liveText').style.color = "#25D366";
+            document.getElementById('liveText').innerHTML = '<span class="status-dot"></span>Live';
+
+            marker.setLatLng(newPos);
+            
+            if (firstLoad) {
+                map.setView(newPos, 16);
+                firstLoad = false;
+            }
+
+            // Geofence Distance Calculation Check
+            checkGeofence(lat, lng);
+
+        } catch (error) {
+            console.log("Fetching Issue: Retaining last location.");
+            setOfflineUI();
         }
-        document.getElementById('statusText').innerText = "Stopped";
-        document.getElementById('statusText').style.color = "gray";
-        document.getElementById('btnStart').style.display = "block";
-        document.getElementById('btnStop').style.display = "none";
     }
+
+    // Geofencing Distance Logic (Haversine Formula)
+    function checkGeofence(busLat, busLng) {
+        const distance = getDistanceInMeters(busLat, busLng, SCHOOL_LAT, SCHOOL_LNG);
+        const statusElem = document.getElementById('geofenceStatus');
+
+        if (distance <= GEOFENCE_RADIUS_METERS) {
+            statusElem.innerText = "📍 Inside School Area";
+            statusElem.className = "geofence-tag inside-school";
+        } else {
+            const distInKm = (distance / 1000).toFixed(2);
+            statusElem.innerText = "🚩 Outside (" + distInKm + " km from school)";
+            statusElem.className = "geofence-tag outside-school";
+        }
+    }
+
+    function getDistanceInMeters(lat1, lon1, lat2, lon2) {
+        const R = 6371e3; // Earth radius in meters
+        const rad = Math.PI / 180;
+        const dLat = (lat2 - lat1) * rad;
+        const dLon = (lon2 - lon1) * rad;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(lat1 * rad) * Math.cos(lat2 * rad) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
+
+    function switchMap(type) {
+        if (type === 'sat') {
+            if (!map.hasLayer(satLayer)) { map.addLayer(satLayer); map.removeLayer(normalLayer); }
+            document.getElementById('btnSat').className = 'active';
+            document.getElementById('btnNormal').className = '';
+        } else {
+            if (!map.hasLayer(normalLayer)) { map.addLayer(normalLayer); map.removeLayer(satLayer); }
+            document.getElementById('btnNormal').className = 'active';
+            document.getElementById('btnSat').className = '';
+        }
+    }
+
+    function setOfflineUI() {
+        document.getElementById('liveText').style.color = "gray";
+        document.getElementById('liveText').innerHTML = "Offline";
+    }
+
+    window.onload = initMap;
 </script>
 </body>
 </html>
