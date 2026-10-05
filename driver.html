@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BPS Bus Driver - GPS Sender</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 90vh;
+        }
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 100%;
+            max-width: 350px;
+        }
+        h2 { color: #075E54; margin-bottom: 20px; }
+        .btn {
+            background-color: #25D366;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .btn-stop { background-color: #d9534f; display: none; }
+        .status-box {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 8px;
+            background: #eef2f5;
+            font-size: 14px;
+            text-align: left;
+        }
+        .data-label { font-weight: bold; color: #333; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>🚌 Driver Location Sender</h2>
+    <p><b>Bus ID:</b> BUS-01</p>
+    
+    <button id="btnStart" class="btn" onclick="startTracking()">Start Tracking</button>
+    <button id="btnStop" class="btn btn-stop" onclick="stopTracking()">Stop Tracking</button>
+
+    <div class="status-box">
+        <p><span class="data-label">Status:</span> <span id="statusText" style="color: gray;">Stopped</span></p>
+        <p><span class="data-label">Latitude:</span> <span id="latText">---</span></p>
+        <p><span class="data-label">Longitude:</span> <span id="lngText">---</span></p>
+        <p><span class="data-label">Speed:</span> <span id="speedText">0 km/h</span></p>
+        <p><span class="data-label">Last Sent:</span> <span id="timeText">---</span></p>
+    </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+    // 1. Apne Firebase Project ki Config Details Yahan Badlein
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT.firebaseapp.com",
+        databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+        projectId: "YOUR_PROJECT",
+        storageBucket: "YOUR_PROJECT.appspot.com",
+        messagingSenderId: "1234567890",
+        appId: "YOUR_APP_ID"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    
+    var watchId = null;
+    const BUS_ID = "BUS-01"; // Bus ID jisko database me update karna hai
+
+    function startTracking() {
+        if ("geolocation" in navigator) {
+            document.getElementById('statusText').innerText = "Connecting GPS...";
+            document.getElementById('statusText').style.color = "orange";
+
+            // Device ke GPS coordinates continuous track karne ke liye options
+            const options = {
+                enableHighAccuracy: true, // Exact location ke liye High Accuracy GPS
+                maximumAge: 0,
+                timeout: 5000
+            };
+
+            watchId = navigator.geolocation.watchPosition(sendLocationToFirebase, handleError, options);
+
+            document.getElementById('btnStart').style.display = "none";
+            document.getElementById('btnStop').style.display = "block";
+        } else {
+            alert("Aapke phone me Geolocation support nahi hai!");
+        }
+    }
+
+    function sendLocationToFirebase(position) {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        // Speed m/s me aati hai, usko km/h me convert kiya hai ( speed * 3.6 )
+        const speedInKmhr = position.coords.speed ? Math.round(position.coords.speed * 3.6) : 0;
+        
+        const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+        // Firebase Realtime Database me Data Push/Set
+        database.ref('buses/' + BUS_ID).set({
+            busId: BUS_ID,
+            lat: lat,
+            lng: lng,
+            speed: speedInKmhr,
+            time: currentTime
+        }).then(() => {
+            // UI Update
+            document.getElementById('statusText').innerText = "Live Tracking Active";
+            document.getElementById('statusText').style.color = "green";
+            document.getElementById('latText').innerText = lat.toFixed(6);
+            document.getElementById('lngText').innerText = lng.toFixed(6);
+            document.getElementById('speedText').innerText = speedInKmhr + " km/h";
+            document.getElementById('timeText').innerText = currentTime;
+        }).catch((err) => {
+            console.error("Firebase Error:", err);
+            document.getElementById('statusText').innerText = "Data Send Error";
+            document.getElementById('statusText').style.color = "red";
+        });
+    }
+
+    function handleError(error) {
+        console.warn('GPS Error: ' + error.message);
+        document.getElementById('statusText').innerText = "GPS Permission Required";
+        document.getElementById('statusText').style.color = "red";
+    }
+
+    function stopTracking() {
+        if (watchId !== null) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+        }
+        document.getElementById('statusText').innerText = "Stopped";
+        document.getElementById('statusText').style.color = "gray";
+        document.getElementById('btnStart').style.display = "block";
+        document.getElementById('btnStop').style.display = "none";
+    }
+</script>
+</body>
+</html>
