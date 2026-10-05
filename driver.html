@@ -1,188 +1,266 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BPS BUS TRACKING</title>
+    <title>BPS Bus Live Tracking</title>
+    
+    <!-- Leaflet Map CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; height: 100vh; overflow: hidden; }
-        .header { background: #075E54; color: white; padding: 12px; text-align: center; font-weight: bold; z-index: 1001; position: relative; font-size: 18px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        #map { height: calc(100vh - 49px); width: 100%; z-index: 1; background: #f0f0f0; }
-        
-        .info-card { 
-            position: absolute; top: 65px; left: 15px; right: 15px; 
-            background: white; padding: 12px 15px; border-radius: 10px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 1000; 
-            border-left: 5px solid #075E54; display: flex; justify-content: space-between; align-items: center;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        
-        .geofence-tag {
-            font-size: 11px; font-weight: bold; margin-top: 4px; display: inline-block; padding: 2px 6px; border-radius: 4px;
-        }
-        .inside-school { background-color: #e6f4ea; color: #137333; }
-        .outside-school { background-color: #fce8e6; color: #c5221f; }
 
-        .view-toggle { position: absolute; top: 160px; right: 15px; z-index: 1000; background: white; padding: 4px; border-radius: 8px; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);}
-        .view-toggle button { padding: 6px 10px; border: none; background: #f0f0f0; cursor: pointer; font-size: 11px; font-weight: bold; border-radius: 5px; }
-        .view-toggle button.active { background: #075E54; color: white; }
-        
-        .status-dot { height: 9px; width: 9px; background-color: #25D366; border-radius: 50%; display: inline-block; margin-right: 4px; animation: blink 1s infinite; }
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+        body {
+            background-color: #f4f7f6;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            width: 100%;
+            background-color: #0088cc;
+            color: white;
+            padding: 15px 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .school-card {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .school-name {
+            color: #b71c1c;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .school-address {
+            color: #d32f2f;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .dashboard-title {
+            color: #c2185b;
+            font-size: 22px;
+            font-weight: bold;
+            margin: 10px 0;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 5px;
+        }
+
+        .sub-title {
+            color: #6a1b9a;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 15px;
+            margin: 10px 0;
+        }
+
+        .status-active {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-inactive {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        .speed-display {
+            font-size: 26px;
+            font-weight: bold;
+            color: #000;
+            margin: 10px 0;
+        }
+
+        #map {
+            width: 100%;
+            height: 350px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            border: 2px solid #fff;
+        }
+
+        .info-panel {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            font-size: 14px;
+        }
+
+        .info-box strong {
+            display: block;
+            color: #555;
+            font-size: 12px;
+        }
+
+        footer {
+            margin-top: auto;
+            padding: 15px;
+            text-align: center;
+            font-size: 13px;
+            color: #0288d1;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
 
-<div class="header">BARSOI PUBLIC SCHOOL - LIVE BUS TRACKER</div>
+    <header>
+        <h1>BPS Bus Tracking Dashboard</h1>
+    </header>
 
-<div class="info-card">
-    <div>
-        <b style="color:#075E54; font-size: 16px;" id="busName">🚌 BUS-01</b><br>
-        <small id="tm" style="color:gray;">Connecting...</small><br>
-        <span id="geofenceStatus" class="geofence-tag outside-school">Checking Location...</span>
+    <div class="container">
+        <!-- School Banner Card -->
+        <div class="school-card">
+            <div class="school-name">BARSOI PUBLIC SCHOOL</div>
+            <div class="school-address">Barsoi, Katihar - 854317</div>
+            <div class="dashboard-title">Live Bus Location</div>
+            <div class="sub-title">School Bus Live Tracking</div>
+            
+            <div id="trip-status" class="status-badge status-inactive">
+                Status: Trip Not Started
+            </div>
+
+            <div class="speed-display" id="speed-text">Speed: 0 km/h</div>
+        </div>
+
+        <!-- Live Map Container -->
+        <div id="map"></div>
+
+        <!-- Location Info Panel -->
+        <div class="info-panel">
+            <div class="info-box">
+                <strong>LATITUDE</strong>
+                <span id="lat-val">0.0000</span>
+            </div>
+            <div class="info-box">
+                <strong>LONGITUDE</strong>
+                <span id="lng-val">0.0000</span>
+            </div>
+            <div class="info-box">
+                <strong>LAST UPDATED</strong>
+                <span id="time-val">--:--:--</span>
+            </div>
+        </div>
     </div>
-    <div style="text-align: right;">
-        <span id="sp" style="font-weight: bold; color: #333; font-size: 18px;">0 km/h</span><br>
-        <small id="liveText" style="color: #25D366;"><span class="status-dot"></span>Live</small>
-    </div>
-</div>
 
-<div class="view-toggle">
-    <button id="btnNormal" class="active" onclick="switchMap('normal')">Normal</button>
-    <button id="btnSat" onclick="switchMap('sat')">Satellite</button>
-</div>
+    <footer>
+        Created & Designed by<br>Riyaz Ahmad (PGT Zoology)
+    </footer>
 
-<div id="map"></div>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Google Apps Script Web App URL (DO GET Endpoint)
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbysJpfOZTAmZ0NsvKn0MpRMnnRckXJ4to_ZAQDaxTsgHzxjW3Fqi0-Dr5gg0sfRolnG/exec";
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        // Map Setup (Default Center: Barsoi, Katihar)
+        const map = L.map('map').setView([25.6321, 87.8931], 14);
 
-<script>
-    // App Script URL (Jo Android App me use ho raha hai)
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbysJpfOZTAmZ0NsvKn0MpRMnnRckXJ4to_ZAQDaxTsgHzxjW3Fqi0-Dr5gg0sfRolnG/exec"; 
-
-    // School Coordinates & Geofence Radius (Barsoi Public School)
-    const SCHOOL_LAT = 25.6127;
-    const SCHOOL_LNG = 85.1588;
-    const GEOFENCE_RADIUS_METERS = 500; // 500 Meters Radius
-
-    var map, marker, normalLayer, satLayer, geofenceCircle;
-    var firstLoad = true;
-
-    function initMap() {
-        map = L.map('map', { zoomControl: false }).setView([SCHOOL_LAT, SCHOOL_LNG], 15);
-        
-        normalLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        satLayer = L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
-            subdomains:['mt0','mt1','mt2','mt3'], maxZoom: 20
-        });
-
-        var busIcon = L.icon({
-            iconUrl: 'https://cdn-icons-png.flaticon.com/512/1048/1048313.png',
-            iconSize: [40, 40], 
-            iconAnchor: [20, 20]
-        });
-
-        marker = L.marker([SCHOOL_LAT, SCHOOL_LNG], { icon: busIcon }).addTo(map);
-
-        // Map Par Red Boundary Circle (Geofence) Draw Karein
-        geofenceCircle = L.circle([SCHOOL_LAT, SCHOOL_LNG], {
-            color: '#d9534f',
-            fillColor: '#f03',
-            fillOpacity: 0.12,
-            radius: GEOFENCE_RADIUS_METERS
+        // OpenStreetMap Layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        fetchData();
-        setInterval(fetchData, 4000); // Har 4 second me location fetch karega
-    }
+        // Custom Red Marker Icon for Bus
+        const busIcon = L.icon({
+            iconUrl: 'https://cdn-icons-png.flaticon.com/512/3448/3448339.png',
+            iconSize: [40, 40],
+            iconAnchor: [20, 20],
+            popupAnchor: [0, -20]
+        });
 
-    async function fetchData() {
-        try {
-            const response = await fetch(SCRIPT_URL);
-            const res = await response.json();
+        let marker = L.marker([25.6321, 87.8931], { icon: busIcon }).addTo(map)
+            .bindPopup("<b>BUS-01</b><br>Searching Location...")
+            .openPopup();
 
-            if (!res || res.lat === "---" || res.lat === "" || parseFloat(res.lat) === 0) {
-                setOfflineUI();
-                return;
+        // Data Fetching Function
+        async function fetchBusLocation() {
+            try {
+                const response = await fetch(SCRIPT_URL);
+                const data = await response.json();
+
+                if (data && data.lat && data.lng) {
+                    const lat = parseFloat(data.lat);
+                    const lng = parseFloat(data.lng);
+                    const speed = data.speed || "0 km/h";
+
+                    // Update Map & Marker Position
+                    const newLatLng = new L.LatLng(lat, lng);
+                    marker.setLatLng(newLatLng);
+                    map.panTo(newLatLng);
+
+                    // Update Text Values
+                    document.getElementById('lat-val').innerText = lat.toFixed(5);
+                    document.getElementById('lng-val').innerText = lng.toFixed(5);
+                    document.getElementById('speed-text').innerText = "Speed: " + speed;
+
+                    const statusBadge = document.getElementById('trip-status');
+
+                    // Check Trip Active Status
+                    if (speed === "0 km/h" && lat === 0 && lng === 0) {
+                        statusBadge.className = "status-badge status-inactive";
+                        statusBadge.innerText = "Status: Trip Not Started / Stopped";
+                        marker.getPopup().setContent("<b>BUS-01</b><br>Status: Stopped");
+                    } else {
+                        statusBadge.className = "status-badge status-active";
+                        statusBadge.innerText = "Status: Trip Active";
+                        marker.getPopup().setContent(`<b>BUS-01</b><br>Speed: ${speed}`);
+                    }
+
+                    // Last Update Time
+                    const now = new Date();
+                    document.getElementById('time-val').innerText = now.toLocaleTimeString();
+                }
+            } catch (error) {
+                console.error("Error fetching location:", error);
             }
-
-            var lat = parseFloat(res.lat);
-            var lng = parseFloat(res.lng);
-            var newPos = [lat, lng];
-
-            // Speed display
-            let speedValue = res.speed.toString().toLowerCase();
-            document.getElementById('sp').innerText = speedValue.includes("km") ? speedValue : speedValue + " km/h";
-
-            // Time & Bus Name
-            document.getElementById('tm').innerText = "Last Update: " + (res.time || "Just Now");
-            document.getElementById('busName').innerText = "🚌 " + (res.busId || "BUS-01");
-            
-            // Live Status UI
-            document.getElementById('liveText').style.color = "#25D366";
-            document.getElementById('liveText').innerHTML = '<span class="status-dot"></span>Live';
-
-            marker.setLatLng(newPos);
-            
-            if (firstLoad) {
-                map.setView(newPos, 16);
-                firstLoad = false;
-            }
-
-            // Geofence Distance Calculation Check
-            checkGeofence(lat, lng);
-
-        } catch (error) {
-            console.log("Fetching Issue: Retaining last location.");
-            setOfflineUI();
         }
-    }
 
-    // Geofencing Distance Logic (Haversine Formula)
-    function checkGeofence(busLat, busLng) {
-        const distance = getDistanceInMeters(busLat, busLng, SCHOOL_LAT, SCHOOL_LNG);
-        const statusElem = document.getElementById('geofenceStatus');
-
-        if (distance <= GEOFENCE_RADIUS_METERS) {
-            statusElem.innerText = "📍 Inside School Area";
-            statusElem.className = "geofence-tag inside-school";
-        } else {
-            const distInKm = (distance / 1000).toFixed(2);
-            statusElem.innerText = "🚩 Outside (" + distInKm + " km from school)";
-            statusElem.className = "geofence-tag outside-school";
-        }
-    }
-
-    function getDistanceInMeters(lat1, lon1, lat2, lon2) {
-        const R = 6371e3; // Earth radius in meters
-        const rad = Math.PI / 180;
-        const dLat = (lat2 - lat1) * rad;
-        const dLon = (lon2 - lon1) * rad;
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                  Math.cos(lat1 * rad) * Math.cos(lat2 * rad) *
-                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
-    }
-
-    function switchMap(type) {
-        if (type === 'sat') {
-            if (!map.hasLayer(satLayer)) { map.addLayer(satLayer); map.removeLayer(normalLayer); }
-            document.getElementById('btnSat').className = 'active';
-            document.getElementById('btnNormal').className = '';
-        } else {
-            if (!map.hasLayer(normalLayer)) { map.addLayer(normalLayer); map.removeLayer(satLayer); }
-            document.getElementById('btnNormal').className = 'active';
-            document.getElementById('btnSat').className = '';
-        }
-    }
-
-    function setOfflineUI() {
-        document.getElementById('liveText').style.color = "gray";
-        document.getElementById('liveText').innerHTML = "Offline";
-    }
-
-    window.onload = initMap;
-</script>
+        // Auto Refresh every 5 seconds (Matching Android App interval)
+        setInterval(fetchBusLocation, 5000);
+        fetchBusLocation(); // Initial Call
+    </script>
 </body>
 </html>
