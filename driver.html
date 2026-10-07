@@ -2,7 +2,7 @@
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BPS Bus Driver App</title>
     
     <!-- Leaflet Map CSS -->
@@ -15,89 +15,83 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        html, body {
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden; /* Ek hi page par fixed (No Scroll) */
+        body {
             background-color: #f4f7f6;
             color: #333;
             display: flex;
             flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
         }
 
         header {
             width: 100%;
             background-color: #0088cc;
             color: white;
-            padding: 8px;
+            padding: 15px;
             text-align: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            flex-shrink: 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
         header h1 {
-            font-size: 16px;
+            font-size: 20px;
             font-weight: 600;
         }
 
         .container {
             width: 100%;
             max-width: 500px;
-            margin: 0 auto;
-            padding: 6px;
+            padding: 15px;
             display: flex;
             flex-direction: column;
-            gap: 6px;
-            flex: 1;
-            height: calc(100vh - 65px);
+            gap: 15px;
         }
 
         .school-card {
             background: white;
-            padding: 8px 10px;
-            border-radius: 10px;
+            padding: 20px;
+            border-radius: 12px;
             text-align: center;
             width: 100%;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-            flex-shrink: 0;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         }
 
         .school-name {
             color: #b71c1c;
             font-weight: bold;
-            font-size: 13px;
+            font-size: 18px;
         }
 
         .school-address {
             color: #d32f2f;
-            font-size: 10px;
-            margin-bottom: 2px;
+            font-size: 14px;
+            margin-bottom: 15px;
         }
 
         .driver-title {
             color: #c2185b;
-            font-size: 18px;
+            font-size: 28px;
             font-weight: bold;
-            margin: 2px 0;
+            margin: 10px 0;
             border-bottom: 2px solid #e0e0e0;
-            padding-bottom: 2px;
+            padding-bottom: 5px;
             display: inline-block;
         }
 
         .sub-title {
             color: #6a1b9a;
-            font-size: 13px;
+            font-size: 20px;
             font-weight: bold;
-            margin-top: 2px;
+            margin-top: 10px;
         }
 
         .status-badge {
             display: inline-block;
-            padding: 3px 10px;
-            border-radius: 15px;
+            padding: 8px 18px;
+            border-radius: 20px;
             font-weight: bold;
-            font-size: 12px;
-            margin: 4px 0;
+            font-size: 16px;
+            margin: 15px 0;
         }
 
         .status-active {
@@ -114,21 +108,21 @@
         .btn-container {
             display: flex;
             justify-content: center;
-            gap: 10px;
-            margin: 4px 0;
+            gap: 15px;
+            margin: 15px 0;
             width: 100%;
         }
 
         .btn {
             flex: 1;
-            padding: 8px 10px;
+            padding: 14px 20px;
             border: none;
             border-radius: 6px;
-            font-size: 12px;
+            font-size: 15px;
             font-weight: bold;
             color: white;
             cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.16);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.16);
             transition: 0.2s;
             text-transform: uppercase;
         }
@@ -156,51 +150,48 @@
         }
 
         .speed-display {
-            font-size: 18px;
+            font-size: 28px;
             font-weight: bold;
             color: #000;
-            margin: 2px 0;
+            margin: 10px 0 5px 0;
         }
 
-        /* Live Map Container Fixed Height */
+        /* Live Map Container */
         #map {
             width: 100%;
-            height: 180px; /* Specific height taaki render issue na aaye */
-            flex: 1;
-            border-radius: 10px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            height: 320px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
             border: 2px solid #fff;
         }
 
         /* Location Info Panel */
         .info-panel {
             background: white;
-            padding: 6px 8px;
+            padding: 12px;
             border-radius: 8px;
             display: flex;
             justify-content: space-around;
             text-align: center;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            font-size: 11px;
-            flex-shrink: 0;
+            font-size: 14px;
         }
 
         .info-box strong {
             display: block;
             color: #555;
-            font-size: 10px;
-            margin-bottom: 1px;
+            font-size: 12px;
+            margin-bottom: 2px;
         }
 
         footer {
             margin-top: auto;
-            padding: 4px;
+            padding: 20px;
             text-align: center;
-            font-size: 11px;
+            font-size: 14px;
             color: #0288d1;
             font-weight: bold;
-            line-height: 1.2;
-            flex-shrink: 0;
+            line-height: 1.4;
         }
     </style>
 </head>
@@ -270,25 +261,20 @@
         // Initialize Map
         function initMap() {
             // Default center: Barsoi
-            map = L.map('map', { zoomControl: false }).setView([25.64563, 87.91774], 15);
+            map = L.map('map').setView([25.64563, 87.91774], 15);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19
             }).addTo(map);
 
             const busIcon = L.icon({
                 iconUrl: 'https://cdn-icons-png.flaticon.com/512/3448/3448339.png',
-                iconSize: [32, 32],
-                iconAnchor: [16, 16],
-                popupAnchor: [0, -16]
+                iconSize: [40, 40],
+                iconAnchor: [20, 20],
+                popupAnchor: [0, -20]
             });
 
             marker = L.marker([25.64563, 87.91774], { icon: busIcon }).addTo(map)
                 .bindPopup("<b>BUS-01</b><br>Speed: 0 km/h");
-
-            // Fix Leaflet Map Render issue in Mobile Containers
-            setTimeout(function() {
-                map.invalidateSize();
-            }, 500);
         }
 
         // Trip Start Function
