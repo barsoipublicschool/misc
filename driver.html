@@ -1,9 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BPS Bus Driver App</title>
+    
+    <!-- Leaflet Map CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         * {
             margin: 0;
@@ -38,10 +41,10 @@
         .container {
             width: 100%;
             max-width: 500px;
-            padding: 20px;
+            padding: 15px;
             display: flex;
             flex-direction: column;
-            align-items: center;
+            gap: 15px;
         }
 
         .school-card {
@@ -97,8 +100,8 @@
         }
 
         .status-inactive {
-            background-color: #f5f5f5;
-            color: #424242;
+            background-color: #ffebee;
+            color: #c62828;
         }
 
         /* Buttons Styling */
@@ -106,7 +109,7 @@
             display: flex;
             justify-content: center;
             gap: 15px;
-            margin: 20px 0;
+            margin: 15px 0;
             width: 100%;
         }
 
@@ -150,7 +153,35 @@
             font-size: 28px;
             font-weight: bold;
             color: #000;
-            margin: 15px 0 5px 0;
+            margin: 10px 0 5px 0;
+        }
+
+        /* Live Map Container */
+        #map {
+            width: 100%;
+            height: 320px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            border: 2px solid #fff;
+        }
+
+        /* Location Info Panel */
+        .info-panel {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            font-size: 14px;
+        }
+
+        .info-box strong {
+            display: block;
+            color: #555;
+            font-size: 12px;
+            margin-bottom: 2px;
         }
 
         footer {
@@ -190,6 +221,25 @@
 
             <div id="speedText" class="speed-display">Speed: 0 km/h</div>
         </div>
+
+        <!-- Live Map View -->
+        <div id="map"></div>
+
+        <!-- Coordinates & Last Updated Info -->
+        <div class="info-panel">
+            <div class="info-box">
+                <strong>LATITUDE</strong>
+                <span id="latVal">0.00000</span>
+            </div>
+            <div class="info-box">
+                <strong>LONGITUDE</strong>
+                <span id="lngVal">0.00000</span>
+            </div>
+            <div class="info-box">
+                <strong>LAST UPDATED</strong>
+                <span id="timeVal">--:--:--</span>
+            </div>
+        </div>
     </div>
 
     <footer>
@@ -197,6 +247,8 @@
         Riyaz Ahmad (PGT Zoology)
     </footer>
 
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbysJpfOZTAmZ0NsvKn0MpRMnnRckXJ4to_ZAQDaxTsgHzxjW3Fqi0-Dr5gg0sfRolnG/exec";
 
@@ -204,8 +256,28 @@
         let isTripActive = false;
         let lastLocation = null;
         let lastPostTime = 0;
+        let map, marker;
 
-        // Trip Start Karne Ka Function
+        // Initialize Map
+        function initMap() {
+            // Default center: Barsoi
+            map = L.map('map').setView([25.64563, 87.91774], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19
+            }).addTo(map);
+
+            const busIcon = L.icon({
+                iconUrl: 'https://cdn-icons-png.flaticon.com/512/3448/3448339.png',
+                iconSize: [40, 40],
+                iconAnchor: [20, 20],
+                popupAnchor: [0, -20]
+            });
+
+            marker = L.marker([25.64563, 87.91774], { icon: busIcon }).addTo(map)
+                .bindPopup("<b>BUS-01</b><br>Speed: 0 km/h");
+        }
+
+        // Trip Start Function
         function startTrip() {
             if (!navigator.geolocation) {
                 alert("Aapke browser me Geolocation support nahi hai!");
@@ -220,7 +292,7 @@
             statusBadge.className = "status-badge status-active";
             statusBadge.innerText = "Status: Trip Active";
 
-            // Device ka GPS Location track karna
+            // Geolocation Watcher
             watchId = navigator.geolocation.watchPosition(
                 handleLocationUpdate,
                 handleLocationError,
@@ -232,7 +304,7 @@
             );
         }
 
-        // Location change hone par data process karna
+        // Location Update Handler
         function handleLocationUpdate(position) {
             if (!isTripActive) return;
 
@@ -241,7 +313,6 @@
             const lng = position.coords.longitude;
             let speedKmh = 0;
 
-            // Device Speed ya Calculated Distance Speed
             if (position.coords.speed !== null && position.coords.speed >= 0) {
                 speedKmh = Math.round(position.coords.speed * 3.6);
             } else if (lastLocation && lastPostTime > 0) {
@@ -256,9 +327,23 @@
 
             if (speedKmh < 4) speedKmh = 0;
             const speedStr = speedKmh + " km/h";
-            document.getElementById('speedText').innerText = "Speed: " + speedStr;
 
-            // 5 Second Interval Check
+            // Update UI Elements
+            document.getElementById('speedText').innerText = "Speed: " + speedStr;
+            document.getElementById('latVal').innerText = lat.toFixed(5);
+            document.getElementById('lngVal').innerText = lng.toFixed(5);
+            
+            const now = new Date();
+            const timeString = now.toTimeString().split(' ')[0];
+            document.getElementById('timeVal').innerText = timeString;
+
+            // Update Map & Marker
+            const newLatLng = new L.LatLng(lat, lng);
+            marker.setLatLng(newLatLng);
+            marker.getPopup().setContent(`<b>BUS-01</b><br>Speed: ${speedStr}`);
+            map.panTo(newLatLng);
+
+            // 5 Second Interval Check for Sheet Post
             if (currentTime - lastPostTime >= 4900) {
                 sendDataToSheet(lat, lng, speedKmh, false);
                 lastPostTime = currentTime;
@@ -266,7 +351,7 @@
             }
         }
 
-        // Trip Stop Karne Ka Function
+        // Trip Stop Function
         function stopTrip() {
             isTripActive = false;
             if (watchId !== null) {
@@ -283,11 +368,11 @@
 
             document.getElementById('speedText').innerText = "Speed: 0 km/h";
 
-            // Backend Script ko STOP Command bhejkar status notify karna
+            // Send STOP Signal
             sendDataToSheet(0, 0, 0, true);
         }
 
-        // Google Apps Script tak Data POST karna
+        // Send Data to Google Sheet
         function sendDataToSheet(lat, lng, speed, isStop) {
             let url = SCRIPT_URL;
 
@@ -311,7 +396,7 @@
             console.warn("GPS Error: " + error.message);
         }
 
-        // Haversine Formula for Distance Calculation (Meters)
+        // Distance Calculation Formula
         function calculateDistance(lat1, lon1, lat2, lon2) {
             const R = 6371000;
             const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -322,6 +407,8 @@
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             return R * c;
         }
+
+        window.onload = initMap;
     </script>
 </body>
 </html>
