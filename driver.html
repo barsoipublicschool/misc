@@ -1,12 +1,9 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BPS Bus Live Tracking</title>
-    
-    <!-- Leaflet Map CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <title>BPS Bus Driver App</title>
     <style>
         * {
             margin: 0;
@@ -28,7 +25,7 @@
             width: 100%;
             background-color: #0088cc;
             color: white;
-            padding: 15px 20px;
+            padding: 15px;
             text-align: center;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
@@ -40,19 +37,20 @@
 
         .container {
             width: 100%;
-            max-width: 600px;
-            padding: 15px;
+            max-width: 500px;
+            padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            align-items: center;
         }
 
         .school-card {
             background: white;
-            padding: 15px;
+            padding: 20px;
             border-radius: 12px;
             text-align: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            width: 100%;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         }
 
         .school-name {
@@ -64,31 +62,33 @@
         .school-address {
             color: #d32f2f;
             font-size: 14px;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
 
-        .dashboard-title {
+        .driver-title {
             color: #c2185b;
-            font-size: 22px;
+            font-size: 28px;
             font-weight: bold;
             margin: 10px 0;
             border-bottom: 2px solid #e0e0e0;
             padding-bottom: 5px;
+            display: inline-block;
         }
 
         .sub-title {
             color: #6a1b9a;
-            font-size: 18px;
+            font-size: 20px;
             font-weight: bold;
+            margin-top: 10px;
         }
 
         .status-badge {
             display: inline-block;
-            padding: 8px 16px;
+            padding: 8px 18px;
             border-radius: 20px;
             font-weight: bold;
-            font-size: 15px;
-            margin: 10px 0;
+            font-size: 16px;
+            margin: 15px 0;
         }
 
         .status-active {
@@ -97,170 +97,231 @@
         }
 
         .status-inactive {
-            background-color: #ffebee;
-            color: #c62828;
+            background-color: #f5f5f5;
+            color: #424242;
+        }
+
+        /* Buttons Styling */
+        .btn-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+            width: 100%;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.16);
+            transition: 0.2s;
+            text-transform: uppercase;
+        }
+
+        .btn-start {
+            background-color: #4CAF50;
+        }
+
+        .btn-start:active {
+            background-color: #388E3C;
+        }
+
+        .btn-stop {
+            background-color: #F44336;
+        }
+
+        .btn-stop:active {
+            background-color: #D32F2F;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            box-shadow: none;
         }
 
         .speed-display {
-            font-size: 26px;
+            font-size: 28px;
             font-weight: bold;
             color: #000;
-            margin: 10px 0;
-        }
-
-        #map {
-            width: 100%;
-            height: 350px;
-            border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            border: 2px solid #fff;
-        }
-
-        .info-panel {
-            background: white;
-            padding: 12px;
-            border-radius: 8px;
-            display: flex;
-            justify-content: space-around;
-            text-align: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            font-size: 14px;
-        }
-
-        .info-box strong {
-            display: block;
-            color: #555;
-            font-size: 12px;
+            margin: 15px 0 5px 0;
         }
 
         footer {
             margin-top: auto;
-            padding: 15px;
+            padding: 20px;
             text-align: center;
-            font-size: 13px;
+            font-size: 14px;
             color: #0288d1;
             font-weight: bold;
+            line-height: 1.4;
         }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>BPS Bus Tracking Dashboard</h1>
+        <h1>BPS Bus Tracking</h1>
     </header>
 
     <div class="container">
-        <!-- School Banner Card -->
         <div class="school-card">
             <div class="school-name">BARSOI PUBLIC SCHOOL</div>
             <div class="school-address">Barsoi, Katihar - 854317</div>
-            <div class="dashboard-title">Live Bus Location</div>
+
+            <div class="driver-title">Driver App</div>
             <div class="sub-title">School Bus Live Tracking</div>
-            
-            <div id="trip-status" class="status-badge status-inactive">
+
+            <div id="statusBadge" class="status-badge status-inactive">
                 Status: Trip Not Started
             </div>
 
-            <div class="speed-display" id="speed-text">Speed: 0 km/h</div>
-        </div>
+            <!-- Start & Stop Buttons -->
+            <div class="btn-container">
+                <button id="btnStart" class="btn btn-start" onclick="startTrip()">START TRIP</button>
+                <button id="btnStop" class="btn btn-stop" onclick="stopTrip()" disabled>STOP TRIP</button>
+            </div>
 
-        <!-- Live Map Container -->
-        <div id="map"></div>
-
-        <!-- Location Info Panel -->
-        <div class="info-panel">
-            <div class="info-box">
-                <strong>LATITUDE</strong>
-                <span id="lat-val">0.0000</span>
-            </div>
-            <div class="info-box">
-                <strong>LONGITUDE</strong>
-                <span id="lng-val">0.0000</span>
-            </div>
-            <div class="info-box">
-                <strong>LAST UPDATED</strong>
-                <span id="time-val">--:--:--</span>
-            </div>
+            <div id="speedText" class="speed-display">Speed: 0 km/h</div>
         </div>
     </div>
 
     <footer>
-        Created & Designed by<br>Riyaz Ahmad (PGT Zoology)
+        Created & Designed by<br>
+        Riyaz Ahmad (PGT Zoology)
     </footer>
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Google Apps Script Web App URL (DO GET Endpoint)
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbysJpfOZTAmZ0NsvKn0MpRMnnRckXJ4to_ZAQDaxTsgHzxjW3Fqi0-Dr5gg0sfRolnG/exec";
 
-        // Map Setup (Default Center: Barsoi, Katihar)
-        const map = L.map('map').setView([25.6321, 87.8931], 14);
+        let watchId = null;
+        let isTripActive = false;
+        let lastLocation = null;
+        let lastPostTime = 0;
 
-        // OpenStreetMap Layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
+        // Trip Start Karne Ka Function
+        function startTrip() {
+            if (!navigator.geolocation) {
+                alert("Aapke browser me Geolocation support nahi hai!");
+                return;
+            }
 
-        // Custom Red Marker Icon for Bus
-        const busIcon = L.icon({
-            iconUrl: 'https://cdn-icons-png.flaticon.com/512/3448/3448339.png',
-            iconSize: [40, 40],
-            iconAnchor: [20, 20],
-            popupAnchor: [0, -20]
-        });
+            isTripActive = true;
+            document.getElementById('btnStart').disabled = true;
+            document.getElementById('btnStop').disabled = false;
 
-        let marker = L.marker([25.6321, 87.8931], { icon: busIcon }).addTo(map)
-            .bindPopup("<b>BUS-01</b><br>Searching Location...")
-            .openPopup();
+            const statusBadge = document.getElementById('statusBadge');
+            statusBadge.className = "status-badge status-active";
+            statusBadge.innerText = "Status: Trip Active";
 
-        // Data Fetching Function
-        async function fetchBusLocation() {
-            try {
-                const response = await fetch(SCRIPT_URL);
-                const data = await response.json();
-
-                if (data && data.lat && data.lng) {
-                    const lat = parseFloat(data.lat);
-                    const lng = parseFloat(data.lng);
-                    const speed = data.speed || "0 km/h";
-
-                    // Update Map & Marker Position
-                    const newLatLng = new L.LatLng(lat, lng);
-                    marker.setLatLng(newLatLng);
-                    map.panTo(newLatLng);
-
-                    // Update Text Values
-                    document.getElementById('lat-val').innerText = lat.toFixed(5);
-                    document.getElementById('lng-val').innerText = lng.toFixed(5);
-                    document.getElementById('speed-text').innerText = "Speed: " + speed;
-
-                    const statusBadge = document.getElementById('trip-status');
-
-                    // Check Trip Active Status
-                    if (speed === "0 km/h" && lat === 0 && lng === 0) {
-                        statusBadge.className = "status-badge status-inactive";
-                        statusBadge.innerText = "Status: Trip Not Started / Stopped";
-                        marker.getPopup().setContent("<b>BUS-01</b><br>Status: Stopped");
-                    } else {
-                        statusBadge.className = "status-badge status-active";
-                        statusBadge.innerText = "Status: Trip Active";
-                        marker.getPopup().setContent(`<b>BUS-01</b><br>Speed: ${speed}`);
-                    }
-
-                    // Last Update Time
-                    const now = new Date();
-                    document.getElementById('time-val').innerText = now.toLocaleTimeString();
+            // Device ka GPS Location track karna
+            watchId = navigator.geolocation.watchPosition(
+                handleLocationUpdate,
+                handleLocationError,
+                {
+                    enableHighAccuracy: true,
+                    maximumAge: 0,
+                    timeout: 10000
                 }
-            } catch (error) {
-                console.error("Error fetching location:", error);
+            );
+        }
+
+        // Location change hone par data process karna
+        function handleLocationUpdate(position) {
+            if (!isTripActive) return;
+
+            const currentTime = Date.now();
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            let speedKmh = 0;
+
+            // Device Speed ya Calculated Distance Speed
+            if (position.coords.speed !== null && position.coords.speed >= 0) {
+                speedKmh = Math.round(position.coords.speed * 3.6);
+            } else if (lastLocation && lastPostTime > 0) {
+                const distanceInMeters = calculateDistance(
+                    lastLocation.lat, lastLocation.lng, lat, lng
+                );
+                const timeInSec = (currentTime - lastPostTime) / 1000;
+                if (timeInSec > 0 && distanceInMeters > 2) {
+                    speedKmh = Math.round((distanceInMeters / timeInSec) * 3.6);
+                }
+            }
+
+            if (speedKmh < 4) speedKmh = 0;
+            const speedStr = speedKmh + " km/h";
+            document.getElementById('speedText').innerText = "Speed: " + speedStr;
+
+            // 5 Second Interval Check
+            if (currentTime - lastPostTime >= 4900) {
+                sendDataToSheet(lat, lng, speedKmh, false);
+                lastPostTime = currentTime;
+                lastLocation = { lat: lat, lng: lng };
             }
         }
 
-        // Auto Refresh every 5 seconds (Matching Android App interval)
-        setInterval(fetchBusLocation, 5000);
-        fetchBusLocation(); // Initial Call
+        // Trip Stop Karne Ka Function
+        function stopTrip() {
+            isTripActive = false;
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
+
+            document.getElementById('btnStart').disabled = false;
+            document.getElementById('btnStop').disabled = true;
+
+            const statusBadge = document.getElementById('statusBadge');
+            statusBadge.className = "status-badge status-inactive";
+            statusBadge.innerText = "Status: Trip Stopped";
+
+            document.getElementById('speedText').innerText = "Speed: 0 km/h";
+
+            // Backend Script ko STOP Command bhejkar status notify karna
+            sendDataToSheet(0, 0, 0, true);
+        }
+
+        // Google Apps Script tak Data POST karna
+        function sendDataToSheet(lat, lng, speed, isStop) {
+            let url = SCRIPT_URL;
+
+            if (isStop) {
+                url += "?status=STOPPED&busId=BUS-01";
+            } else {
+                url += `?lat=${lat}&lng=${lng}&speed=${speed}&busId=BUS-01`;
+            }
+
+            fetch(url, {
+                method: 'POST',
+                mode: 'no-cors'
+            }).then(() => {
+                console.log(isStop ? "Stop signal sent" : "Location sent successfully");
+            }).catch(err => {
+                console.error("Network Error: ", err);
+            });
+        }
+
+        function handleLocationError(error) {
+            console.warn("GPS Error: " + error.message);
+        }
+
+        // Haversine Formula for Distance Calculation (Meters)
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371000;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
     </script>
 </body>
 </html>
