@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Homeopathic Patient Management System</title>
+<!-- SweetAlert2 CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<style>
+:root {
+  --primary:#087f8c;
+  --secondary:#075b66;
+  --light:#e9f7f8;
+  --bg:#f4f7fa;
+  --white:#ffffff;
+  --text:#253746;
+  --muted:#718096;
+  --danger:#dc3545;
+  --success:#198754;
+  --warning:#ffc107;
+  --border:#e1e8ed;
+  --shadow:0 3px 12px rgba(0,0,0,.07);
+}
+* { box-sizing:border-box; }
+body { margin:0; font-family:Arial, sans-serif; background:var(--bg); color:var(--text); }
+button,input,select,textarea { font:inherit; }
+button { cursor:pointer; }
+.app { display:flex; min-height:100vh; }
+.sidebar { width:245px; background:#073b43; color:white; position:fixed; top:0; bottom:0; left:0; overflow-y:auto; z-index:1000; transition:.3s; }
+.brand { padding:22px 15px; text-align:center; border-bottom:1px solid rgba(255,255,255,.15); }
+.brand h2 { margin:0; font-size:19px; }
+.brand small { color:#b9e3e6; }
+.menu { padding:12px 8px; }
+.menu button { display:block; width:100%; padding:13px 14px; margin:3px 0; border:0; background:transparent; color:#d7eeee; text-align:left; border-radius:7px; font-size:14px; }
+.menu button:hover, .menu button.active { background:var(--primary); color:white; }
+.main { margin-left:245px; width:calc(100% - 245px); }
+.topbar { background:white; padding:13px 20px; box-shadow:var(--shadow); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100; }
+.topbar h3 { margin:0; }
+.top-actions { display:flex; gap:8px; align-items:center; }
+.content { padding:22px; }
+.page { display:none; }
+.page.active { display:block; }
+.page-title { margin:0 0 18px; font-size:23px; }
+.stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:15px; margin-bottom:22px; }
+.stat-card { background:white; padding:20px; border-radius:10px; box-shadow:var(--shadow); border-left:4px solid var(--primary); }
+.stat-card h3 { margin:0; font-size:27px; color:var(--primary); }
+.stat-card p { margin:8px 0 0; color:var(--muted); font-size:13px; }
+.panel { background:white; padding:20px; border-radius:10px; box-shadow:var(--shadow); margin-bottom:20px; }
+.panel h3 { margin-top:0; }
+.form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:15px; }
+.form-group { display:flex; flex-direction:column; gap:7px; }
+.form-group.full { grid-column:1/-1; }
+label { font-size:13px; font-weight:bold; }
+input,select,textarea { width:100%; padding:11px; border:1px solid var(--border); border-radius:6px; background:white; outline:none; }
+input:focus,select:focus,textarea:focus { border-color:var(--primary); }
+textarea { min-height:85px; resize:vertical; }
+.btn { padding:10px 16px; border:0; border-radius:6px; background:var(--primary); color:white; font-size:13px; margin:3px; }
+.btn:hover { opacity:.9; }
+.btn-secondary { background:#64748b; }
+.btn-success { background:var(--success); }
+.btn-danger { background:var(--danger); }
+.btn-warning { background:#d69e00; color:#fff; }
+.form-actions { margin-top:15px; }
+.table-wrap { width:100%; overflow-x:auto; }
+table { width:100%; border-collapse:collapse; min-width:650px; }
+th,td { padding:11px; border-bottom:1px solid var(--border); text-align:left; font-size:13px; }
+th { background:var(--light); color:var(--secondary); }
+tr:hover { background:#f8fbfc; }
+.search-box { max-width:350px; margin-bottom:15px; }
+#loader { display:none; position:fixed; inset:0; background:rgba(255,255,255,.7); z-index:4000; align-items:center; justify-content:center; font-size:18px; color:var(--primary); }
+.modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:2000; align-items:center; justify-content:center; padding:15px; }
+.modal-content { width:100%; max-width:650px; max-height:90vh; overflow:auto; background:white; border-radius:10px; padding:22px; }
+.modal-header { display:flex; justify-content:space-between; align-items:center; }
+.close { border:0; background:transparent; font-size:25px; }
+.report-box { background:white; padding:20px; border-radius:10px; box-shadow:var(--shadow); }
+.footer { text-align:center; padding:20px; color:var(--muted); font-size:12px; }
+#mobileMenu { display:none; background:var(--primary); color:white; border:0; padding:8px 12px; border-radius:5px; }
+
+/* PRESCRIPTION PAD STYLES matching design screenshot */
+.rx-container {
+  width: 210mm;
+  min-height: 297mm;
+  background: #ffffff;
+  margin: 0 auto;
+  position: relative;
+  border: 1px solid #ccc;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: #1a252c;
+  font-family: Arial, sans-serif;
+}
+.rx-top-bg {
+  position: absolute;
+  top: 0; right: 0; left: 0; height: 110px;
+  background: linear-gradient(135deg, #1b3d2f 0%, #295743 60%, #e2be3a 100%);
+  clip-path: ellipse(85% 100% at 50% 0%);
+  z-index: 1;
+}
+.rx-header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 30px;
+  color: white;
+}
+.rx-brand { display: flex; align-items: center; gap: 10px; }
+.rx-logo { font-size: 32px; font-weight: bold; color: #a4d291; }
+.rx-title h1 { margin: 0; font-size: 22px; text-transform: uppercase; letter-spacing: 1px; color: #fff; }
+.rx-title p { margin: 0; font-size: 11px; color: #cde6d8; }
+.rx-body { display: flex; flex: 1; position: relative; z-index: 2; margin-top: 15px; }
+.rx-sidebar-left {
+  width: 32%;
+  border-right: 2px solid #1b3d2f;
+  padding: 15px;
+  font-size: 11px;
+  line-height: 1.4;
+  background: #fafafa;
+}
+.rx-doc-block { margin-bottom: 15px; }
+.rx-doc-name { font-weight: bold; font-size: 13px; color: #1b3d2f; margin-bottom: 2px; }
+.rx-doc-sub { color: #555; margin-bottom: 4px; }
+.rx-sec-title { font-weight: bold; border-bottom: 1px solid #ddd; margin: 10px 0 5px; color: #1b3d2f; text-transform: uppercase; font-size: 10px; }
+.rx-main-content {
+  width: 68%;
+  padding: 20px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.rx-watermark {
+  position: absolute;
+  top: 35%; left: 20%;
+  width: 250px; opacity: 0.05;
+  pointer-events: none; z-index: 0;
+}
+.rx-patient-info {
+  display: flex; flex-wrap: wrap; gap: 10px 15px;
+  font-size: 12px; border-bottom: 1px dashed #ccc;
+  padding-bottom: 10px; margin-bottom: 15px;
+}
+.rx-info-item { flex: 1 1 45%; }
+.rx-info-item.full { flex: 1 1 100%; }
+.rx-info-item span.label { font-weight: bold; color: #333; }
+.rx-symbol { font-size: 28px; font-weight: bold; font-family: 'Times New Roman', serif; color: #1b3d2f; margin-bottom: 10px; }
+.rx-section { margin-bottom: 12px; position: relative; z-index: 1; }
+.rx-section-title { font-weight: bold; font-size: 12px; background: #eef5f1; padding: 4px 8px; border-left: 3px solid #1b3d2f; color: #1b3d2f; margin-bottom: 6px; }
+.rx-table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 11px; }
+.rx-table th, .rx-table td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+.rx-table th { background: #f4f4f4; color: #1b3d2f; font-weight: bold; }
+.rx-footer-bg {
+  position: relative;
+  margin-top: auto;
+  background: linear-gradient(135deg, #e2be3a 0%, #1b3d2f 40%);
+  color: white; text-align: right;
+  padding: 6px 20px; font-size: 10px;
+}
+
+@media(max-width:850px) {
+  .sidebar { left:-260px; }
+  .sidebar.open { left:0; }
+  .main { margin-left:0; width:100%; }
+  #mobileMenu { display:block; }
+  .content { padding:13px; }
+  .topbar { padding:12px; }
+  .form-grid { grid-template-columns:1fr; }
+  .page-title { font-size:20px; }
+  .panel { padding:14px; }
+}
+@media print {
+  .sidebar, .topbar, .footer, .btn, .page-title, select, input { display:none !important; }
+  .main { width:100%; margin:0; }
+  .content { padding:0; }
+  body { background:white; }
+  .panel { box-shadow:none; padding:0; border:none; }
+  .rx-container { border:none; box-shadow:none; width:100%; min-height:100vh; }
+  .page { display:none !important; }
+  .page.active { display:block !important; }
+}
+</style>
+</head>
+<body>
+
+<div id="loader">Please wait...</div>
+
+<div class="app">
+<aside class="sidebar" id="sidebar">
+  <div class="brand">
+    <h2>HOMEOPATHY</h2>
+    <small>Patient Management System</small>
+  </div>
+  <div class="menu">
+    <button class="active" onclick="showPage('dashboard',this)">🏠 Dashboard</button>
+    <button onclick="showPage('patients',this)">👥 Patient Registration</button>
+    <button onclick="showPage('patientList',this)">📋 Patient List</button>
+    <button onclick="showPage('caseHistory',this)">📁 Case History</button>
+    <button onclick="showPage('visits',this)">🩺 Visits & Follow-up</button>
+    <button onclick="showPage('medicines',this)">💊 Medicine Records</button>
+    <button onclick="showPage('investigations',this)">🧪 Investigations</button>
+    <button onclick="showPage('prescription',this)">📜 Prescription Pad</button>
+    <button onclick="showPage('appointments',this)">📅 Appointments</button>
+    <button onclick="showPage('billing',this)">🧾 Billing & Payments</button>
+    <button onclick="showPage('inventory',this)">📦 Medicine Inventory</button>
+    <button onclick="showPage('reports',this)">📊 Reports</button>
+  </div>
+</aside>
+
+<main class="main">
+<header class="topbar">
+  <div style="display:flex;align-items:center;gap:10px">
+    <button id="mobileMenu" onclick="toggleSidebar()">☰</button>
+    <h3 id="topTitle">Dashboard</h3>
+  </div>
+  <div class="top-actions">
+    <button class="btn btn-secondary" onclick="toggleLanguage()">हिन्दी / EN</button>
+    <span id="connectionStatus">Connecting...</span>
+  </div>
+</header>
+
+<div class="content">
+<!-- DASHBOARD -->
+<section class="page active" id="dashboard">
+  <h2 class="page-title">Dashboard</h2>
+  <div class="stats">
+    <div class="stat-card"><h3 id="totalPatients">0</h3><p>Total Patients</p></div>
+    <div class="stat-card"><h3 id="activePatients">0</h3><p>Active Patients</p></div>
+    <div class="stat-card"><h3 id="totalVisits">0</h3><p>Total Visits</p></div>
+    <div class="stat-card"><h3 id="todayVisits">0</h3><p>Today's Visits</p></div>
+    <div class="stat-card"><h3 id="todayAppointments">0</h3><p>Today's Appointments</p></div>
+    <div class="stat-card"><h3 id="totalMedicines">0</h3><p>Medicine Records</p></div>
+    <div class="stat-card"><h3 id="totalRevenue">₹0</h3><p>Total Payments Received</p></div>
+    <div class="stat-card"><h3 id="pendingBalance">₹0</h3><p>Pending Payments</p></div>
+  </div>
+  <div class="panel">
+    <h3>Quick Actions</h3>
+    <button class="btn" onclick="showPage('patients')">+ Register Patient</button>
+    <button class="btn" onclick="showPage('prescription')">📜 Generate Prescription</button>
+    <button class="btn" onclick="showPage('appointments')">+ New Appointment</button>
+    <button class="btn" onclick="showPage('billing')">+ Create Bill</button>
+    <button class="btn" onclick="showPage('inventory')">+ Add Inventory</button>
+  </div>
+</section>
+
+<!-- PATIENT REGISTRATION -->
+<section class="page" id="patients">
+  <h2 class="page-title">Patient Registration</h2>
+  <div class="panel">
+    <form id="patientForm">
+      <div class="form-grid">
+        <div class="form-group"><label>Patient Name *</label><input name="Patient_Name" required></div>
+        <div class="form-group"><label>Age</label><input type="number" name="Age" min="0"></div>
+        <div class="form-group">
+          <label>Gender</label>
+          <select name="Gender">
+            <option value="">Select</option>
+            <option>Male</option>
+            <option>Female</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Mobile</label><input name="Mobile" type="tel"></div>
+        <div class="form-group">
+          <label>Blood Group</label>
+          <select name="Blood_Group">
+            <option value="">Select</option>
+            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+            <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Occupation</label><input name="Occupation"></div>
+        <div class="form-group full"><label>Address</label><textarea name="Address"></textarea></div>
+        <div class="form-group"><label>Emergency Contact</label><input name="Emergency_Contact"></div>
+        <div class="form-group">
+          <label>Status</label>
+          <select name="Status">
+            <option>Active</option>
+            <option>Inactive</option>
+          </select>
+        </div>
+        <div class="form-group full"><label>Medical Notes</label><textarea name="Medical_Notes"></textarea></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-success" type="submit">Save Patient</button>
+        <button class="btn btn-secondary" type="reset">Clear</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<!-- PATIENT LIST -->
+<section class="page" id="patientList">
+  <h2 class="page-title">Patient List</h2>
+  <div class="panel">
+    <input class="search-box" id="patientSearch" placeholder="Search by Patient ID, Name or Mobile..." oninput="searchPatients()">
+    <button class="btn" onclick="loadPatients()">Refresh</button>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Patient ID</th><th>Name</th><th>Age</th><th>Gender</th><th>Mobile</th><th>Status</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="patientTable"><tr><td colspan="7">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- CASE HISTORY -->
+<section class="page" id="caseHistory">
+  <h2 class="page-title">Case History</h2>
+  <div class="panel">
+    <form id="caseForm">
+      <div class="form-grid">
+        <div class="form-group full"><label>Select Patient *</label><select name="Patient_ID" class="patientDropdown" required></select></div>
+        <div class="form-group"><label>Date</label><input type="date" name="Date" id="caseDate"></div>
+        <div class="form-group"><label>Complaint Duration</label><input name="Complaint_Duration"></div>
+        <div class="form-group full"><label>Chief Complaint</label><textarea name="Chief_Complaint"></textarea></div>
+        <div class="form-group full"><label>Mental Symptoms</label><textarea name="Mental_Symptoms"></textarea></div>
+        <div class="form-group full"><label>Physical Symptoms</label><textarea name="Physical_Symptoms"></textarea></div>
+        <div class="form-group full"><label>Past History</label><textarea name="Past_History"></textarea></div>
+        <div class="form-group full"><label>Family History</label><textarea name="Family_History"></textarea></div>
+        <div class="form-group full"><label>Personal History</label><textarea name="Personal_History"></textarea></div>
+        <div class="form-group full"><label>Allergies</label><textarea name="Allergies"></textarea></div>
+        <div class="form-group full"><label>Other Notes</label><textarea name="Other_Notes"></textarea></div>
+      </div>
+      <button class="btn btn-success" type="submit">Save Case History</button>
+    </form>
+  </div>
+  <div class="panel">
+    <h3>Patient Case History Records</h3>
+    <select class="patientDropdown" id="caseFilter"></select>
+    <button class="btn" onclick="loadCaseHistory()">View Records</button>
+    <div id="caseRecords"></div>
+  </div>
+</section>
+
+<!-- VISITS -->
+<section class="page" id="visits">
+  <h2 class="page-title">Visits & Follow-up</h2>
+  <div class="panel">
+    <form id="visitForm">
+      <div class="form-grid">
+        <div class="form-group full"><label>Patient *</label><select name="Patient_ID" class="patientDropdown" required></select></div>
+        <div class="form-group"><label>Visit Date</label><input type="date" name="Visit_Date" id="visitDate"></div>
+        <div class="form-group"><label>Follow-up Date</label><input type="date" name="Followup_Date"></div>
+        <div class="form-group full"><label>Symptoms</label><textarea name="Symptoms"></textarea></div>
+        <div class="form-group full"><label>Patient Condition</label><textarea name="Patient_Condition"></textarea></div>
+        <div class="form-group full"><label>Notes</label><textarea name="Notes"></textarea></div>
+      </div>
+      <button class="btn btn-success" type="submit">Save Visit</button>
+    </form>
+  </div>
+  <div class="panel">
+    <h3>Visit Records</h3>
+    <select class="patientDropdown" id="visitFilter"></select>
+    <button class="btn" onclick="loadVisits()">View Records</button>
+    <div id="visitRecords"></div>
+  </div>
+</section>
+
+<!-- MEDICINES -->
+<section class="page" id="medicines">
+  <h2 class="page-title">Medicine Records</h2>
+  <div class="panel">
+    <form id="medicineForm">
+      <div class="form-grid">
+        <div class="form-group full"><label>Patient *</label><select name="Patient_ID" class="patientDropdown" required></select></div>
+        <div class="form-group"><label>Visit ID (Optional)</label><input name="Visit_ID"></div>
+        <div class="form-group"><label>Medicine Name</label><input name="Medicine_Name" required></div>
+        <div class="form-group"><label>Potency</label><input name="Potency"></div>
+        <div class="form-group"><label>Dosage</label><input name="Dosage"></div>
+        <div class="form-group"><label>Frequency</label><input name="Frequency"></div>
+        <div class="form-group"><label>Duration</label><input name="Duration"></div>
+        <div class="form-group full"><label>Notes</label><textarea name="Notes"></textarea></div>
+      </div>
+      <button class="btn btn-success" type="submit">Save Medicine Record</button>
+    </form>
+  </div>
+  <div class="panel">
+    <h3>Medicine History</h3>
+    <select class="patientDropdown" id="medicineFilter"></select>
+    <button class="btn" onclick="loadMedicines()">View Records</button>
+    <div id="medicineRecords"></div>
+  </div>
+</section>
+
+<!-- INVESTIGATIONS -->
+<section class="page" id="investigations">
+  <h2 class="page-title">Investigations</h2>
+  <div class="panel">
+    <form id="investigationForm">
+      <div class="form-grid">
+        <div class="form-group full"><label>Patient *</label><select name="Patient_ID" class="patientDropdown" required></select></div>
+        <div class="form-group"><label>Investigation Name</label><input name="Investigation_Name" required></div>
+        <div class="form-group"><label>Test Date</label><input type="date" name="Test_Date"></div>
+        <div class="form-group full"><label>Result</label><textarea name="Result"></textarea></div>
+        <div class="form-group full"><label>Report Notes</label><textarea name="Report_Notes"></textarea></div>
+      </div>
+      <button class="btn btn-success" type="submit">Save Investigation</button>
+    </form>
+  </div>
+  <div class="panel">
+    <h3>Investigation Records</h3>
+    <select class="patientDropdown" id="investigationFilter"></select>
+    <button class="btn" onclick="loadInvestigations()">View Records</button>
+    <div id="investigationRecords"></div>
+  </div>
+</section>
+
+<!-- PRESCRIPTION PAD -->
+<section class="page" id="prescription">
+  <h2 class="page-title">Patient Prescription Pad</h2>
+  <div class="panel">
+    <div style="display:flex; gap:10px; align-items:center; margin-bottom:15px;">
+      <select class="patientDropdown" id="rxPatientSelect" style="max-width:300px;"></select>
+      <button class="btn" onclick="loadPrescriptionData()">Generate Prescription</button>
+      <button class="btn btn-success" onclick="window.print()">Print Prescription</button>
+    </div>
+  </div>
+
+  <div class="rx-container" id="rxPrintArea">
+    <div class="rx-top-bg"></div>
+    <div class="rx-header">
+      <div class="rx-brand">
+        <div class="rx-logo">✚</div>
+        <div class="rx-title">
+          <h1>Drlogy Hospital</h1>
+          <p>Your health our priority</p>
+        </div>
+      </div>
+      <div style="font-size:11px;">NABH Accredited</div>
+    </div>
+    <div class="rx-body">
+      <div class="rx-sidebar-left">
+        <div class="rx-doc-block">
+          <div class="rx-doc-name">Dr Yash Patel</div>
+          <div class="rx-doc-sub">Consultant General Medicine<br>MBBS, MD Medicine</div>
+        </div>
+        <div class="rx-doc-block">
+          <div class="rx-doc-name">Dr Rashi Patel</div>
+          <div class="rx-doc-sub">Consultant General Medicine<br>MBBS, MD Medicine</div>
+        </div>
+        <div class="rx-doc-block">
+          <div class="rx-doc-name">Dr Khushi Patel</div>
+          <div class="rx-doc-sub">Consultant General Medicine<br>MBBS, MD Medicine</div>
+        </div>
+        
+        <div class="rx-sec-title">Timing</div>
+        <p><b>Mon - Fri</b><br>8:00 am - 1:00 pm<br>2:00 pm - 8:00 pm</p>
+        <p><b>Sat</b><br>8:00 am - 1:00 pm</p>
+
+        <div class="rx-sec-title">Contact</div>
+        <p><b>Call / Appt:</b> 0001234567</p>
+        <p><b>Emergency:</b> 0123456789</p>
+
+        <div class="rx-sec-title">Address</div>
+        <p>105-108, Smart Vision Complex, Opp. Healthcare, MG Road, Mumbai - 400001</p>
+      </div>
+
+      <div class="rx-main-content">
+        <svg class="rx-watermark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M4.8 2.3A.3.3 0 0 0 4.5 2.6V7a5 5 0 0 0 10 0V2.6a.3.3 0 0 0-.3-.3h-.4a.3.3 0 0 0-.3.3V7a4 4 0 0 1-8 0V2.6a.3.3 0 0 0-.3-.3h-.4z"/>
+          <path d="M9.5 12a4.5 4.5 0 0 0 4.5 4.5h1a4.5 4.5 0 0 0 4.5-4.5v-2a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v2a2.5 2.5 0 0 1-2.5 2.5h-1A2.5 2.5 0 0 1 11.5 12"/>
+        </svg>
+
+        <div class="rx-patient-info">
+          <div class="rx-info-item"><span class="label">Name:</span> <span id="rxName">____________________</span></div>
+          <div class="rx-info-item"><span class="label">Age/Sex:</span> <span id="rxAgeSex">____ / ____</span></div>
+          <div class="rx-info-item"><span class="label">Date:</span> <span id="rxDate">____________________</span></div>
+          <div class="rx-info-item"><span class="label">Patient ID:</span> <span id="rxID">____________________</span></div>
+          <div class="rx-info-item full"><span class="label">Address:</span> <span id="rxAddress">____________________</span></div>
+        </div>
+
+        <div class="rx-symbol">R<sub>x</sub></div>
+
+        <div class="rx-section">
+          <div class="rx-section-title">Case History Details</div>
+          <div id="rxCaseDetails" style="font-size:11px; line-height:1.4;">No case history recorded.</div>
+        </div>
+
+        <div class="rx-section">
+          <div class="rx-section-title">Investigations</div>
+          <div id="rxInvDetails" style="font-size:11px;">No investigation records.</div>
+        </div>
+
+        <div class="rx-section">
+          <div class="rx-section-title">Prescribed Medicines (Date-wise)</div>
+          <div id="rxMedsDetails">No medicines prescribed.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rx-footer-bg">
+      Not for Medico legal purpose | www.drlogy.com
+    </div>
+  </div>
+</section>
+
+<!-- APPOINTMENTS -->
+<section class="page" id="appointments">
+  <h2 class="page-title">Appointment Management</h2>
+  <div class="panel">
+    <form id="appointmentForm">
+      <div class="form-grid">
+        <div class="form-group full"><label>Select Patient *</label><select name="Patient_ID" class="patientDropdown" required></select></div>
+        <div class="form-group"><label>Appointment Date *</label><input type="date" name="Appointment_Date" required></div>
+        <div class="form-group"><label>Appointment Time</label><input type="time" name="Appointment_Time"></div>
+        <div class="form-group full"><label>Reason</label><textarea name="Reason"></textarea></div>
+        <div class="form-group">
+          <label>Status</label>
+          <select name="Status">
+            <option>Scheduled</option><option>Completed</option><option>Cancelled</option><option>Missed</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Notes</label><input name="Notes"></div>
+      </div>
+      <button class="btn btn-success" type="submit">Save Appointment</button>
+    </form>
+  </div>
+  <div class="panel">
+    <h3>Appointment List</h3>
+    <button class="btn" onclick="loadAppointments()">Refresh Appointments</button>
+    <div id="appointmentRecords"></div>
+  </div>
+</section>
+
+<!-- BILLING -->
+<section class="page" id="billing">
+  <h2 class="page-title">Billing & Payments</h2>
+  <div class="panel">
+    <form id="billingForm">
+      <div class="form-grid">
+        <div class="form-group full"><label>Patient *</label><select name="Patient_ID" class="patientDropdown" required></select></div>
+        <div class="form-group"><label>Bill Date</label><input type="date" name="Bill_Date" id="billDate"></div>
+        <div class="form-group"><label>Subtotal (₹)</label><input type="number" name="Subtotal" id="billSubtotal" min="0" step="0.01" required></div>
+        <div class="form-group"><label>Discount (₹)</label><input type="number" name="Discount" id="billDiscount" min="0" value="0" step="0.01"></div>
+        <div class="form-group"><label>Total (₹)</label><input type="number" id="billTotal" readonly></div>
+        <div class="form-group"><label>Paid (₹)</label><input type="number" name="Paid" id="billPaid" min="0" value="0" step="0.01"></div>
+        <div class="form-group"><label>Balance (₹)</label><input type="number" id="billBalance" readonly></div>
+        <div class="form-group">
+          <label>Payment Mode</label>
+          <select name="Payment_Mode">
+            <option>Cash</option><option>UPI</option><option>Card</option><option>Bank Transfer</option><option>Other</option>
+          </select>
+        </div>
+        <div class="form-group full"><label>Notes</label><textarea name="Notes"></textarea></div>
+      </div>
+      <button class="btn btn-success" type="submit">Save Bill</button>
+    </form>
+  </div>
+  <div class="panel">
+    <h3>Billing Records</h3>
+    <select class="patientDropdown" id="billFilter"></select>
+    <button class="btn" onclick="loadBills()">View Bills</button>
+    <div id="billRecords"></div>
+  </div>
+</section>
+
+<!-- INVENTORY -->
+<section class="page" id="inventory">
+  <h2 class="page-title">Medicine Inventory</h2>
+  <div class="panel">
+    <h3>Add Inventory Item</h3>
+    <form id="inventoryForm">
+      <div class="form-grid">
+        <div class="form-group"><label>Medicine Name *</label><input name="Medicine_Name" required></div>
+        <div class="form-group"><label>Potency</label><input name="Potency"></div>
+        <div class="form-group"><label>Batch Number</label><input name="Batch_No"></div>
+        <div class="form-group"><label>Quantity</label><input type="number" name="Quantity" min="0" value="0"></div>
+        <div class="form-group">
+          <label>Unit</label>
+          <select name="Unit">
+            <option>Bottle</option><option>Box</option><option>Strip</option><option>Piece</option><option>Packet</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Purchase Price</label><input type="number" name="Purchase_Price" min="0" step="0.01"></div>
+        <div class="form-group"><label>Sale Price</label><input type="number" name="Sale_Price" min="0" step="0.01"></div>
+        <div class="form-group"><label>Expiry Date</label><input type="date" name="Expiry_Date"></div>
+        <div class="form-group"><label>Supplier</label><input name="Supplier"></div>
+        <div class="form-group full"><label>Notes</label><textarea name="Notes"></textarea></div>
+      </div>
+      <button class="btn btn-success" type="submit">Save Inventory</button>
+    </form>
+  </div>
+
+  <div class="panel">
+    <h3>Stock Transaction</h3>
+    <form id="stockForm">
+      <div class="form-grid">
+        <div class="form-group"><label>Inventory Item</label><select name="Item_ID" id="stockItem" required></select></div>
+        <div class="form-group">
+          <label>Transaction Type</label>
+          <select name="Type">
+            <option value="IN">Stock IN</option>
+            <option value="OUT">Stock OUT</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Quantity</label><input type="number" name="Quantity" min="1" required></div>
+        <div class="form-group"><label>Notes</label><input name="Notes"></div>
+      </div>
+      <button class="btn btn-success" type="submit">Update Stock</button>
+    </form>
+  </div>
+
+  <div class="panel">
+    <h3>Inventory List</h3>
+    <button class="btn" onclick="loadInventory()">Refresh</button>
+    <button class="btn btn-warning" onclick="loadLowStock()">Low Stock Alert</button>
+    <button class="btn btn-warning" onclick="loadExpiry()">Expiry Alert</button>
+    <div id="inventoryRecords"></div>
+  </div>
+</section>
+
+<!-- REPORTS -->
+<section class="page" id="reports">
+  <h2 class="page-title">Reports</h2>
+  <div class="panel">
+    <h3>Patient Report</h3>
+    <select class="patientDropdown" id="reportPatient"></select>
+    <button class="btn" onclick="generatePatientReport()">Generate Report</button>
+  </div>
+  <div class="panel">
+    <h3>System Summary</h3>
+    <button class="btn" onclick="generateSummary()">Generate Summary</button>
+  </div>
+  <div class="panel">
+    <button class="btn btn-success" onclick="window.print()">Print / Save PDF</button>
+    <div id="reportOutput" class="report-box"></div>
+  </div>
+</section>
+</div>
+
+<div class="footer">Homeopathic Patient Management System</div>
+</main>
+</div>
+
+<!-- PATIENT DETAIL MODAL -->
+<div class="modal" id="patientModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Patient Details</h3>
+      <button class="close" onclick="closeModal()">×</button>
+    </div>
+    <div id="patientDetails"></div>
+    <button class="btn" onclick="window.print()">Print Details</button>
+    <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+  </div>
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbyPx6aHzlmlkwwj9KuuEKr3dgIBSgpzEDOYDFNGuJS_9Y-0m-9NGU_V_L5qvvedSBbMpg/exec";
+
+let allPatients = [];
+let allInventory = [];
+let currentPatient = null;
+let currentLanguage = "en";
+
+function showLoader(show) { document.getElementById("loader").style.display = show ? "flex" : "none"; }
+
+/* SWEETALERT INTEGRATION (ENGLISH) */
+function notify(message, isError = false) {
+  Swal.fire({
+    title: isError ? 'Error!' : 'Success!',
+    text: message,
+    icon: isError ? 'error' : 'success',
+    timer: 3000,
+    showConfirmButton: false,
+    toast: true,
+    position: 'top-end'
+  });
+}
+
+function escapeHTML(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+}
+
+function formData(form) {
+  const obj = {};
+  new FormData(form).forEach((value, key) => obj[key] = value);
+  return obj;
+}
+
+let requestCounter = 0;
+function api(action, data = {}) {
+  return new Promise((resolve, reject) => {
+    const callback = "hpmsCallback_" + Date.now() + "_" + (++requestCounter);
+    const script = document.createElement("script");
+    const params = new URLSearchParams({ action, data: JSON.stringify(data), callback });
+
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error("Server timeout. Check internet and Apps Script deployment."));
+    }, 20000);
+
+    function cleanup() {
+      clearTimeout(timeout);
+      delete window[callback];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    window[callback] = function(response) {
+      cleanup();
+      if (!response || response.success === false) {
+        reject(new Error(response && response.error ? response.error : "API request failed"));
+        return;
+      }
+      resolve(response);
+    };
+
+    script.onerror = function() {
+      cleanup();
+      reject(new Error("Unable to connect to Apps Script. Ensure Web App URL is deployed as 'Anyone'."));
+    };
+
+    script.src = API_URL + "?" + params.toString();
+    document.body.appendChild(script);
+  });
+}
+
+function showPage(pageId, button) {
+  document.querySelectorAll(".page").forEach(page => page.classList.remove("active"));
+  document.getElementById(pageId).classList.add("active");
+  document.querySelectorAll(".menu button").forEach(btn => btn.classList.remove("active"));
+  if (button) button.classList.add("active");
+
+  const title = pageId.replace(/([A-Z])/g, " $1");
+  document.getElementById("topTitle").textContent = title.charAt(0).toUpperCase() + title.slice(1);
+  document.getElementById("sidebar").classList.remove("open");
+
+  if (pageId === "dashboard") loadDashboard();
+  if (pageId === "patientList") loadPatients();
+  if (["caseHistory", "visits", "medicines", "investigations", "prescription", "appointments", "billing", "reports"].includes(pageId)) fillPatientDropdowns();
+  if (pageId === "inventory") loadInventory();
+}
+
+function toggleSidebar() { document.getElementById("sidebar").classList.toggle("open"); }
+
+async function checkConnection() {
+  try {
+    const result = await api("test");
+    const status = document.getElementById("connectionStatus");
+    status.textContent = "● Connected";
+    status.style.color = "green";
+  } catch (error) {
+    const status = document.getElementById("connectionStatus");
+    status.textContent = "● Offline";
+    status.style.color = "red";
+    notify(error.message, true);
+  }
+}
+
+async function loadDashboard() {
+  try {
+    const result = await api("dashboard");
+    document.getElementById("totalPatients").textContent = result.totalPatients || 0;
+    document.getElementById("activePatients").textContent = result.activePatients || 0;
+    document.getElementById("totalVisits").textContent = result.totalVisits || 0;
+    document.getElementById("todayVisits").textContent = result.todayVisits || 0;
+    document.getElementById("todayAppointments").textContent = result.todayAppointments || 0;
+    document.getElementById("totalMedicines").textContent = result.totalMedicineRecords || 0;
+    document.getElementById("totalRevenue").textContent = "₹" + (Number(result.totalRevenue) || 0).toFixed(2);
+    document.getElementById("pendingBalance").textContent = "₹" + (Number(result.pendingBalance) || 0).toFixed(2);
+  } catch (error) {
+    notify(error.message, true);
+  }
+}
+
+document.getElementById("patientForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  try {
+    showLoader(true);
+    const result = await api("savePatient", formData(this));
+    notify("Patient registered successfully. ID: " + result.Patient_ID);
+    this.reset();
+    await loadPatients();
+    await fillPatientDropdowns();
+    await loadDashboard();
+  } catch (error) {
+    notify(error.message, true);
+  } finally { showLoader(false); }
+});
+
+async function loadPatients() {
+  try {
+    showLoader(true);
+    const result = await api("getPatients");
+    allPatients = result.data || [];
+    renderPatients(allPatients);
+    await fillPatientDropdowns();
+  } catch (error) {
+    notify(error.message, true);
+  } finally { showLoader(false); }
+}
+
+function renderPatients(patients) {
+  const tbody = document.getElementById("patientTable");
+  if (!patients.length) {
+    tbody.innerHTML = '<tr><td colspan="7">No patients found</td></tr>';
+    return;
+  }
+  tbody.innerHTML = patients.map(p => `
+    <tr>
+      <td>${escapeHTML(p.Patient_ID)}</td>
+      <td>${escapeHTML(p.Patient_Name)}</td>
+      <td>${escapeHTML(p.Age)}</td>
+      <td>${escapeHTML(p.Gender)}</td>
+      <td>${escapeHTML(p.Mobile)}</td>
+      <td>${escapeHTML(p.Status)}</td>
+      <td><button class="btn" onclick="viewPatient('${escapeHTML(p.Patient_ID)}')">View</button></td>
+    </tr>
+  `).join("");
+}
+
+function searchPatients() {
+  const query = document.getElementById("patientSearch").value.toLowerCase();
+  const filtered = allPatients.filter(p => [p.Patient_ID, p.Patient_Name, p.Mobile].some(val => String(val || "").toLowerCase().includes(query)));
+  renderPatients(filtered);
+}
+
+async function fillPatientDropdowns() {
+  try {
+    if (!allPatients.length) {
+      const result = await api("getPatients");
+      allPatients = result.data || [];
+    }
+    document.querySelectorAll(".patientDropdown").forEach(select => {
+      const prev = select.value;
+      select.innerHTML = '<option value="">Select Patient</option>';
+      allPatients.forEach(p => {
+        const option = document.createElement("option");
+        option.value = p.Patient_ID;
+        option.textContent = p.Patient_Name + " (" + p.Patient_ID + ")";
+        select.appendChild(option);
+      });
+      if (prev) select.value = prev;
+    });
+  } catch (error) { notify(error.message, true); }
+}
+
+async function viewPatient(id) {
+  try {
+    showLoader(true);
+    const result = await api("getPatient", { Patient_ID: id });
+    if (!result.data) throw new Error("Patient not found");
+    currentPatient = result.data;
+    const p = result.data;
+
+    document.getElementById("patientDetails").innerHTML = `
+      <div class="report-box">
+        <h2>${escapeHTML(p.Patient_Name)}</h2>
+        <p><b>Patient ID:</b> ${escapeHTML(p.Patient_ID)}</p>
+        <p><b>Registration Date:</b> ${escapeHTML(p.Registration_Date)}</p>
+        <p><b>Age:</b> ${escapeHTML(p.Age)}</p>
+        <p><b>Gender:</b> ${escapeHTML(p.Gender)}</p>
+        <p><b>Mobile:</b> ${escapeHTML(p.Mobile)}</p>
+        <p><b>Blood Group:</b> ${escapeHTML(p.Blood_Group)}</p>
+        <p><b>Address:</b> ${escapeHTML(p.Address)}</p>
+        <p><b>Occupation:</b> ${escapeHTML(p.Occupation)}</p>
+        <p><b>Emergency Contact:</b> ${escapeHTML(p.Emergency_Contact)}</p>
+        <p><b>Status:</b> ${escapeHTML(p.Status)}</p>
+        <p><b>Medical Notes:</b> ${escapeHTML(p.Medical_Notes)}</p>
+      </div>
+    `;
+    document.getElementById("patientModal").style.display = "flex";
+  } catch (error) { notify(error.message, true); }
+  finally { showLoader(false); }
+}
+
+function closeModal() { document.getElementById("patientModal").style.display = "none"; }
+
+/* PRESCRIPTION MODULE FUNCTIONALITY */
+async function loadPrescriptionData() {
+  const patientId = document.getElementById("rxPatientSelect").value;
+  if (!patientId) return notify("Please select a patient first", true);
+
+  try {
+    showLoader(true);
+    const [patientRes, caseRes, invRes, medRes] = await Promise.all([
+      api("getPatient", { Patient_ID: patientId }),
+      api("getCaseHistory", { Patient_ID: patientId }),
+      api("getInvestigations", { Patient_ID: patientId }),
+      api("getMedicines", { Patient_ID: patientId })
+    ]);
+
+    const p = patientRes.data;
+    if (!p) throw new Error("Patient information not found.");
+
+    document.getElementById("rxName").textContent = p.Patient_Name || "N/A";
+    document.getElementById("rxAgeSex").textContent = (p.Age || "N/A") + " / " + (p.Gender || "N/A");
+    document.getElementById("rxDate").textContent = new Date().toLocaleDateString('en-GB');
+    document.getElementById("rxID").textContent = p.Patient_ID;
+    document.getElementById("rxAddress").textContent = p.Address || "N/A";
+
+    // Case Details
+    const cases = caseRes.data || [];
+    if (cases.length > 0) {
+      const latestCase = cases[cases.length - 1];
+      document.getElementById("rxCaseDetails").innerHTML = `
+        <p><b>Chief Complaint:</b> ${escapeHTML(latestCase.Chief_Complaint || "N/A")} (${escapeHTML(latestCase.Complaint_Duration || "")})</p>
+        <p><b>Physical/Mental Symptoms:</b> ${escapeHTML(latestCase.Physical_Symptoms || "")} ${escapeHTML(latestCase.Mental_Symptoms || "")}</p>
+        <p><b>Past & Family History:</b> ${escapeHTML(latestCase.Past_History || "None")} / ${escapeHTML(latestCase.Family_History || "None")}</p>
+      `;
+    } else {
+      document.getElementById("rxCaseDetails").innerHTML = "<p>No recorded case history.</p>";
+    }
+
+    // Investigations
+    const invs = invRes.data || [];
+    if (invs.length > 0) {
+      document.getElementById("rxInvDetails").innerHTML = invs.map(i => `
+        <div><b>${escapeHTML(i.Investigation_Name)}</b> (${escapeHTML(i.Test_Date)}): ${escapeHTML(i.Result)}</div>
+      `).join("");
+    } else {
+      document.getElementById("rxInvDetails").innerHTML = "No recent investigations.";
+    }
+
+    // Medicines (Date-wise grouping)
+    const meds = medRes.data || [];
+    if (meds.length > 0) {
+      // Group medicines by Date_Prescribed
+      const groupedMeds = {};
+      meds.forEach(m => {
+        const d = m.Date_Prescribed ? String(m.Date_Prescribed).substring(0,10) : "Other";
+        if (!groupedMeds[d]) groupedMeds[d] = [];
+        groupedMeds[d].push(m);
+      });
+
+      let medHtml = "";
+      Object.keys(groupedMeds).reverse().forEach(dateKey => {
+        medHtml += `<div style="font-size:11px; font-weight:bold; color:#1b3d2f; margin-top:8px;">Prescribed Date: ${escapeHTML(dateKey)}</div>`;
+        medHtml += `
+          <table class="rx-table">
+            <thead>
+              <tr>
+                <th>Medicine Name</th>
+                <th>Potency</th>
+                <th>Dosage</th>
+                <th>Frequency</th>
+                <th>Duration</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        groupedMeds[dateKey].forEach(m => {
+          medHtml += `
+            <tr>
+              <td>${escapeHTML(m.Medicine_Name)}</td>
+              <td>${escapeHTML(m.Potency)}</td>
+              <td>${escapeHTML(m.Dosage)}</td>
+              <td>${escapeHTML(m.Frequency)}</td>
+              <td>${escapeHTML(m.Duration)}</td>
+            </tr>
+          `;
+        });
+        medHtml += `</tbody></table>`;
+      });
+      document.getElementById("rxMedsDetails").innerHTML = medHtml;
+    } else {
+      document.getElementById("rxMedsDetails").innerHTML = "<p>No medicines prescribed yet.</p>";
+    }
+
+    notify("Prescription generated successfully.");
+
+  } catch (err) {
+    notify(err.message, true);
+  } finally {
+    showLoader(false);
+  }
+}
+
+document.getElementById("caseForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  try {
+    showLoader(true);
+    const result = await api("saveCaseHistory", formData(this));
+    notify(result.message);
+    this.reset();
+    setToday("caseDate");
+  } catch (error) { notify(error.message, true); }
+  finally { showLoader(false); }
+});
+
+async function loadCaseHistory() {
+  const id = document.getElementById("caseFilter").value;
+  if (!id) return notify("Select a patient", true);
+  try {
+    const result = await api("getCaseHistory", { Patient_ID: id });
+    renderRecords("caseRecords", result.data, ["Date", "Chief_Complaint", "Complaint_Duration", "Mental_Symptoms", "Physical_Symptoms", "Allergies", "Other_Notes"]);
+  } catch (error) { notify(error.message, true); }
+}
+
+document.getElementById("visitForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  try {
+    showLoader(true);
+    const result = await api("saveVisit", formData(this));
+    notify(result.message);
+    this.reset();
+    setToday("visitDate");
+  } catch (error) { notify(error.message, true); }
+  finally { showLoader(false); }
+});
+
+async function loadVisits() {
+  const id = document.getElementById("visitFilter").value;
+  if (!id) return notify("Select patient", true);
+  try {
+    const result = await api("getVisits", { Patient_ID: id });
+    renderRecords("visitRecords", result.data, ["Visit_Date", "Symptoms", "Patient_Condition", "Followup_Date", "Notes"]);
+  } catch (error) { notify(error.message, true); }
+}
+
+document.getElementById("medicineForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  try {
+    showLoader(true);
+    const result = await api("saveMedicine", formData(this));
+    notify(result.message);
+    this.reset();
+  } catch (error) { notify(error.message, true); }
+  finally { showLoader(false); }
+});
+
+async function loadMedicines() {
+  const id = document.getElementById("medicineFilter").value;
+  if (!id) return notify("Select patient", true);
+  try {
+    const result = await api("getMedicines", { Patient_ID: id });
+    renderRecords("medicineRecords", result.data, ["Medicine_Name", "Potency", "Dosage", "Frequency", "Duration", "Date_Prescribed", "Notes"]);
+  } catch (error) { notify(error.message, true); }
+}
+
+document.getElementById("investigationForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  try {
+    showLoader(true);
+    const result = await api("saveInvestigation", formData(this));
+    notify(result.message);
+    this.reset();
+  } catch (error) { notify(error.message, true); }
+  finally { showLoader(false); }
+});
+
+async function loadInvestigations() {
+  const id = document.getElementById("investigationFilter").value;
+  if (!id) return notify("Select patient", true);
+  try {
+    const result = await api("getInvestigations", { Patient_ID: id });
+    renderRecords("investigationRecords", result.data, ["Investigation_Name", "Test_Date", "Result", "Report_Notes"]);
+  } catch (error) { notify(error.message, true); }
+}
+
+document.getElementById("appointmentForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  try {
+    showLoader(true);
+    const result = await api("saveAppointment", formData(this));
+    notify(result.message);
+    this.reset();
+    await loadAppointments();
+    await loadDashboard();
+  } catch (error) { notify(error.message, true); }
+  finally { showLoader(false); }
+});
+
+async function loadAppointments() {
+  try {
+    const result = await api("getAppointments");
+    renderRecords("appointmentRecords", result.data, ["Appointment_ID", "Patient_ID", "Appointment_Date", "Appointment_Time", "Reason", "Status", "Notes"]);
+  } catch (error) { notify(error.message, true); }
+}
+
+function calculateBill() {
+  const subtotal = Number(document.getElementById("billSubtotal").value) || 0;
+  const discount = Number(document.getElementById("billDiscount").value) || 0;
+  const paid = Number(document.getElementById("billPaid").value) || 0;
+  const total = Math.max(0, subtotal - discount);
+
+  document.getElementById("billTotal").value = total.toFixed(2);
+  document.getElementById("billBalance").value = (total - paid).toFixed(2);
+}
+
+["billSubtotal", "billDiscount", "billPaid"].forEach(id => {
+  document.getElementById(id).addEventListener("input", calculateBill);
+});
+
+document.getElementById("billingForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const subtotal = Number(document.getElementById("billSubtotal").value) || 0;
+  const discount = Number(document.getElementById("billDiscount").value) || 0;
+  const paid = Number(document.getElementById("billPaid").value) || 0;
+
+  if (discount > subtotal) return notify("Discount cannot exceed subtotal", true);
+  if (paid > subtotal - discount) return notify("Paid amount cannot exceed total", true);
+
+  try {
+    showLoader(true);
+    const result = await api("saveBill", formData(this));
+    notify("Bill saved. Bill ID: " + result.Bill_ID);
+    this.reset();
+    calculateBill();
+    await loadBills();
+    await loadDashboard();
+  } catch (error) { notify(error.message, true); }
+  finally { showLoader(false); }
+});
+
+async function loadBills() {
+  const id = document.getElementById("billFilter").value;
+  if (!id) return notify("Select patient", true);
+  try {
+    const result = await api("getBills", { Patient_ID: id });
+    renderRecords("billRecords", result.data, ["Bill_ID", "Bill_Date", "Subtotal", "Discount", "Total", "Paid", "Balance", "Payment_Mode"]);
+  } catch (error) { notify(error.message, true); }
+}
+
+document.getElementById("inventoryForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  try {
+    showLoader(true);
+    const result = await api("saveInventory", formData(this));
+    notify(result.message);
+    this.reset();
+    await loadInventory();
+  } catch (error) { notify(error.message, true); }
+  finally { showLoader(false); }
+});
+
+async function loadInventory() {
+  try {
+    const result = await api("getInventory");
+    allInventory = result.data || [];
+    renderInventory(allInventory);
+
+    const select = document.getElementById("stockItem");
+    select.innerHTML = '<option value="">Select Item</option>';
+    allInventory.forEach(item => {
+      const option = document.createElement("option");
+      option.value = item.Item_ID;
+      option.textContent = item.Medicine_Name + " - " + item.Potency + " (" + item.Quantity + ")";
+      select.appendChild(option);
+    });
+  } catch (error) { notify(error.message, true); }
+}
+
+function renderInventory(items) {
+  const container = document.getElementById("inventoryRecords");
+  if (!items.length) { container.innerHTML = "No inventory records found"; return; }
+
+  container.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Item ID</th><th>Medicine</th><th>Potency</th><th>Batch</th><th>Quantity</th><th>Sale Price</th><th>Expiry</th></tr>
+        </thead>
+        <tbody>
+          ${items.map(item => `
+            <tr>
+              <td>${escapeHTML(item.Item_ID)}</td>
+              <td>${escapeHTML(item.Medicine_Name)}</td>
+              <td>${escapeHTML(item.Potency)}</td>
+              <td>${escapeHTML(item.Batch_No)}</td>
+              <td>${escapeHTML(item.Quantity)} ${escapeHTML(item.Unit)}</td>
+              <td>₹${escapeHTML(item.Sale_Price)}</td>
+              <td>${escapeHTML(item.Expiry_Date)}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+document.getElementById("stockForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  try {
+    showLoader(true);
+    const result = await api("stockTransaction", formData(this));
+    notify("Stock updated. Current stock: " + result.Current_Stock);
+    this.reset();
+    await loadInventory();
+  } catch (error) { notify(error.message, true); }
+  finally { showLoader(false); }
+});
+
+async function loadLowStock() {
+  try {
+    const result = await api("getLowStock", { limit: 5 });
+    renderInventory(result.data || []);
+    notify("Low stock report loaded");
+  } catch (error) { notify(error.message, true); }
+}
+
+async function loadExpiry() {
+  try {
+    const result = await api("getExpiringMedicines", { days: 90 });
+    renderInventory(result.data || []);
+    notify("Expiry report loaded");
+  } catch (error) { notify(error.message, true); }
+}
+
+function renderRecords(containerId, records, columns) {
+  const container = document.getElementById(containerId);
+  if (!records || !records.length) { container.innerHTML = "<p>No records found.</p>"; return; }
+
+  let html = '<div class="table-wrap"><table><thead><tr>';
+  columns.forEach(col => html += "<th>" + escapeHTML(col.replace(/_/g, " ")) + "</th>");
+  html += "</tr></thead><tbody>";
+
+  records.forEach(rec => {
+    html += "<tr>";
+    columns.forEach(col => html += "<td>" + escapeHTML(rec[col]) + "</td>");
+    html += "</tr>";
+  });
+  html += "</tbody></table></div>";
+  container.innerHTML = html;
+}
+
+async function generatePatientReport() {
+  const id = document.getElementById("reportPatient").value;
+  if (!id) return notify("Select a patient", true);
+  try {
+    showLoader(true);
+    const patientResult = await api("getPatient", { Patient_ID: id });
+    const patient = patientResult.data;
+
+    const [cases, visits, medicines, investigations, bills] = await Promise.all([
+      api("getCaseHistory", { Patient_ID: id }),
+      api("getVisits", { Patient_ID: id }),
+      api("getMedicines", { Patient_ID: id }),
+      api("getInvestigations", { Patient_ID: id }),
+      api("getBills", { Patient_ID: id })
+    ]);
+
+    let html = `
+      <h2>Patient Report</h2>
+      <h3>${escapeHTML(patient.Patient_Name)}</h3>
+      <p><b>Patient ID:</b> ${escapeHTML(patient.Patient_ID)}</p>
+      <p><b>Age:</b> ${escapeHTML(patient.Age)}</p>
+      <p><b>Gender:</b> ${escapeHTML(patient.Gender)}</p>
+      <p><b>Mobile:</b> ${escapeHTML(patient.Mobile)}</p>
+      <hr>
+      <h3>Case History (${cases.data.length})</h3>
+      ${simpleReportTable(cases.data, ["Date", "Chief_Complaint", "Complaint_Duration"])}
+      <h3>Visits (${visits.data.length})</h3>
+      ${simpleReportTable(visits.data, ["Visit_Date", "Symptoms", "Followup_Date"])}
+      <h3>Medicine Records (${medicines.data.length})</h3>
+      ${simpleReportTable(medicines.data, ["Medicine_Name", "Potency", "Dosage", "Frequency", "Duration"])}
+      <h3>Investigations (${investigations.data.length})</h3>
+      ${simpleReportTable(investigations.data, ["Investigation_Name", "Test_Date", "Result"])}
+      <h3>Bills (${bills.data.length})</h3>
+      ${simpleReportTable(bills.data, ["Bill_ID", "Bill_Date", "Total", "Paid", "Balance"])}
+    `;
+    document.getElementById("reportOutput").innerHTML = html;
+  } catch (error) { notify(error.message, true); }
+  finally { showLoader(false); }
+}
+
+function simpleReportTable(records, columns) {
+  if (!records.length) return "<p>No records.</p>";
+  let html = '<div class="table-wrap"><table><thead><tr>';
+  columns.forEach(c => html += "<th>" + escapeHTML(c.replace(/_/g, " ")) + "</th>");
+  html += "</tr></thead><tbody>";
+  records.forEach(rec => {
+    html += "<tr>";
+    columns.forEach(c => html += "<td>" + escapeHTML(rec[c]) + "</td>");
+    html += "</tr>";
+  });
+  html += "</tbody></table></div>";
+  return html;
+}
+
+async function generateSummary() {
+  try {
+    showLoader(true);
+    const result = await api("dashboard");
+    document.getElementById("reportOutput").innerHTML = `
+      <h2>Clinic Summary Report</h2>
+      <p><b>Generated:</b> ${new Date().toLocaleString()}</p>
+      <hr>
+      <p>Total Patients: ${result.totalPatients}</p>
+      <p>Active Patients: ${result.activePatients}</p>
+      <p>Total Visits: ${result.totalVisits}</p>
+      <p>Today's Visits: ${result.todayVisits}</p>
+      <p>Today's Appointments: ${result.todayAppointments}</p>
+      <p>Medicine Records: ${result.totalMedicineRecords}</p>
+      <p>Total Revenue: ₹${result.totalRevenue}</p>
+      <p>Pending Balance: ₹${result.pendingBalance}</p>
+    `;
+  } catch (error) { notify(error.message, true); }
+  finally { showLoader(false); }
+}
+
+function setToday(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const today = new Date();
+  const localDate = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().split("T")[0];
+  el.value = localDate;
+}
+
+const translations = {
+  "Dashboard": "डैशबोर्ड", "Patient Registration": "मरीज पंजीकरण", "Patient List": "मरीज सूची",
+  "Case History": "केस हिस्ट्री", "Visits & Follow-up": "विजिट एवं फॉलो-अप", "Medicine Records": "दवा रिकॉर्ड",
+  "Investigations": "जांच रिकॉर्ड", "Appointments": "अपॉइंटमेंट", "Billing & Payments": "बिलिंग एवं भुगतान",
+  "Medicine Inventory": "दवा स्टॉक", "Reports": "रिपोर्ट", "Total Patients": "कुल मरीज",
+  "Active Patients": "सक्रिय मरीज", "Total Visits": "कुल विजिट"
+};
+
+function toggleLanguage() {
+  currentLanguage = currentLanguage === "en" ? "hi" : "en";
+  document.querySelectorAll(".menu button").forEach(button => {
+    if (!button.dataset.original) button.dataset.original = button.textContent.trim();
+    const original = button.dataset.original.replace(/^[^\w]+/,"").trim();
+    const translated = translations[original];
+    button.textContent = (currentLanguage === "hi" && translated) ? " " + translated : button.dataset.original;
+  });
+  notify(currentLanguage === "hi" ? "हिंदी मेनू सक्रिय" : "English menu active");
+}
+
+async function initializeApp() {
+  setToday("caseDate");
+  setToday("visitDate");
+  setToday("billDate");
+  await checkConnection();
+  await loadDashboard();
+  await loadPatients();
+  await loadInventory();
+}
+
+window.addEventListener("load", initializeApp);
+</script>
+</body>
+</html>
