@@ -76,11 +76,11 @@ tr:hover { background:#f8fbfc; }
 .footer { text-align:center; padding:20px; color:var(--muted); font-size:12px; }
 #mobileMenu { display:none; background:var(--primary); color:white; border:0; padding:8px 12px; border-radius:5px; }
 
-/* PREMIUM A4 PRESCRIPTION PAD STYLES */
+/* SCREENSHOT MATCHING COLORFUL & ATTRACTIVE A4 PRESCRIPTION PAD */
 .rx-page-wrapper {
   display: flex;
   justify-content: center;
-  background: #e2e8f0;
+  background: #cbd5e1;
   padding: 20px 0;
 }
 .rx-container {
@@ -88,120 +88,155 @@ tr:hover { background:#f8fbfc; }
   min-height: 297mm;
   background: #ffffff;
   padding: 0;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   position: relative;
-  color: #2b3b4d;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #1e293b;
+  font-family: Arial, sans-serif;
+  overflow: hidden;
 }
-.rx-header-top {
-  background: linear-gradient(135deg, #073b43 0%, #087f8c 100%);
-  color: white;
-  padding: 20px 30px;
+
+/* Left Curved Design Background */
+.rx-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 35px;
+  height: 100%;
+  background: linear-gradient(180deg, #4c1d95 0%, #7c3aed 50%, #f97316 100%);
+  z-index: 2;
+}
+
+.rx-top-banner {
+  border-bottom: 3px solid #4c1d95;
+  padding: 15px 20px 15px 50px;
+  background: #ffffff;
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  border-bottom: 4px solid #e2be3a;
+  align-items: flex-start;
+  position: relative;
 }
-.rx-clinic-brand h1 { margin: 0; font-size: 24px; letter-spacing: 0.5px; text-transform: uppercase; }
-.rx-clinic-brand p { margin: 4px 0 0; font-size: 12px; color: #b9e3e6; }
-.rx-doc-badges { text-align: right; font-size: 11px; background: rgba(255,255,255,0.1); padding: 8px 12px; border-radius: 6px; }
 
-.rx-content-body {
-  display: flex;
+.rx-heading-center {
+  text-align: center;
   flex: 1;
 }
-.rx-sidebar {
-  width: 32%;
-  background: #f8fafc;
-  border-right: 1px solid #e2e8f0;
-  padding: 20px 15px;
-  font-size: 11.5px;
-  line-height: 1.5;
-}
-.rx-sidebar-section {
-  margin-bottom: 18px;
-}
-.rx-sidebar-title {
+
+.rx-main-heading {
+  font-size: 22px;
   font-weight: bold;
-  color: #073b43;
+  color: #dc2626;
   text-transform: uppercase;
-  font-size: 11px;
-  border-bottom: 2px solid #087f8c;
-  padding-bottom: 3px;
-  margin-bottom: 6px;
-  letter-spacing: 0.5px;
+  margin: 0 0 5px 0;
+  letter-spacing: 1px;
 }
-.rx-main-area {
-  width: 68%;
-  padding: 20px 25px;
+
+.rx-doc-info-grid {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: #334155;
+  line-height: 1.3;
+  text-align: left;
+  margin-top: 5px;
+}
+
+.rx-logo-badge {
+  text-align: center;
+  color: #15803d;
+  font-weight: bold;
+  font-size: 11px;
+}
+
+.rx-patient-details-box {
+  padding: 10px 20px 10px 50px;
+  background: #f8fafc;
+  border-bottom: 1px dashed #cbd5e1;
+  font-size: 11.5px;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 8px 12px;
+}
+
+.rx-patient-details-box div span {
+  font-weight: bold;
+  color: #0f172a;
+}
+
+.rx-body-section {
+  padding: 15px 25px 15px 50px;
+  flex: 1;
+  position: relative;
   display: flex;
   flex-direction: column;
 }
-.rx-patient-bar {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px 12px;
-  background: #f1f5f9;
-  padding: 12px 15px;
-  border-radius: 6px;
-  border-left: 4px solid #087f8c;
-  font-size: 12px;
-  margin-bottom: 15px;
+
+.rx-watermark-icon {
+  position: absolute;
+  top: 30%;
+  left: 35%;
+  width: 280px;
+  opacity: 0.04;
+  pointer-events: none;
+  z-index: 0;
 }
-.rx-patient-bar .full {
-  grid-column: span 2;
-}
-.rx-patient-bar span {
-  font-weight: 600;
-  color: #1e293b;
-}
-.rx-symbol-box {
-  font-size: 30px;
+
+.rx-symbol-rx {
+  font-size: 28px;
   font-weight: bold;
-  font-family: Georgia, serif;
-  color: #073b43;
-  margin-bottom: 10px;
-  line-height: 1;
+  font-family: 'Times New Roman', serif;
+  color: #4c1d95;
+  margin-bottom: 8px;
 }
-.rx-section-block {
-  margin-bottom: 15px;
-}
-.rx-section-heading {
-  font-size: 12px;
+
+.rx-block-title {
+  font-size: 11px;
   font-weight: bold;
-  color: #073b43;
-  background: #e6f4f5;
-  padding: 5px 10px;
-  border-left: 3px solid #073b43;
-  margin-bottom: 6px;
+  color: #4c1d95;
+  background: #f3e8ff;
+  padding: 4px 8px;
+  border-left: 3px solid #7c3aed;
+  margin-bottom: 5px;
   text-transform: uppercase;
 }
-.rx-medicines-table {
+
+.rx-content-group {
+  margin-bottom: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.rx-table-custom {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 5px;
+  margin-top: 4px;
   font-size: 11px;
 }
-.rx-medicines-table th, .rx-medicines-table td {
+
+.rx-table-custom th, .rx-table-custom td {
   border: 1px solid #cbd5e1;
-  padding: 6px 8px;
+  padding: 5px 7px;
   text-align: left;
 }
-.rx-medicines-table th {
+
+.rx-table-custom th {
   background: #f1f5f9;
-  color: #073b43;
+  color: #4c1d95;
   font-weight: bold;
 }
-.rx-footer-bar {
-  background: #073b43;
+
+.rx-footer-banner {
+  background: linear-gradient(90deg, #4c1d95 0%, #7c3aed 60%, #f97316 100%);
   color: white;
-  text-align: center;
-  padding: 8px;
-  font-size: 11px;
-  letter-spacing: 0.5px;
+  padding: 8px 20px 8px 50px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: bold;
   margin-top: auto;
 }
 
@@ -474,67 +509,76 @@ tr:hover { background:#f8fbfc; }
 
   <div class="rx-page-wrapper">
     <div class="rx-container" id="rxPrintArea">
-      <div class="rx-header-top">
-        <div class="rx-clinic-brand">
-          <h1>Advanced Homeopathy Clinic</h1>
-          <p>Comprehensive Care & Healing Solution</p>
+      <!-- Top Colorful Banner -->
+      <div class="rx-top-banner">
+        <div style="width: 25%;">
+          <div style="font-weight:bold; color:#4c1d95; font-size:12px;">Dr. Riyaz Ahmad</div>
+          <div style="font-size:9.5px; color:#475569;">PGT Zoology, M.Sc., B.Ed.<br>Head Incharge, UPS Patna City</div>
         </div>
-        <div class="rx-doc-badges">
-          <b>Dr. Riyaz Ahmad</b><br>
-          <span>PGT Zoology, M.Sc, B.Ed</span>
-        </div>
-      </div>
-
-      <div class="rx-content-body">
-        <div class="rx-sidebar">
-          <div class="rx-sidebar-section">
-            <div class="rx-sidebar-title">Consultant</div>
-            <p><b>Dr. Riyaz Ahmad</b><br>Specialist in Homeopathic Care & Life Sciences</p>
-          </div>
-          <div class="rx-sidebar-section">
-            <div class="rx-sidebar-title">Clinic Timing</div>
-            <p><b>Mon - Sat:</b><br>09:00 AM - 02:00 PM<br>05:00 PM - 08:00 PM<br><b>Sunday:</b> Closed</p>
-          </div>
-          <div class="rx-sidebar-section">
-            <div class="rx-sidebar-title">Contact & Help</div>
-            <p><b>Phone:</b> +91 XXXXXXXXXX<br><b>Emergency:</b> Available 24/7</p>
-          </div>
-          <div class="rx-sidebar-section">
-            <div class="rx-sidebar-title">Address</div>
-            <p>Patna City, Bihar, India</p>
+        <div class="rx-heading-center">
+          <h2 class="rx-main-heading">श्री ओ.पी.डी. सेन्टर</h2>
+          <div class="rx-doc-info-grid">
+            <div>
+              <b>Dr. Riyaz Ahmad</b><br>
+              Specialist in Homeopathy & Life Sciences<br>
+              Ex Resident Department of Clinical Care<br>
+              Patna City Reg. No.-46712
+            </div>
+            <div style="text-align: right;">
+              <b>Advanced Homeopathic Care</b><br>
+              Child Specialist & General Physician<br>
+              Medical Office Govt. of Bihar<br>
+              Helpline: 24x7 Emergency Available
+            </div>
           </div>
         </div>
-
-        <div class="rx-main-area">
-          <div class="rx-patient-bar">
-            <div><span>Patient Name:</span> <span id="rxName">________________</span></div>
-            <div><span>Age / Gender:</span> <span id="rxAgeSex">____ / ____</span></div>
-            <div><span>Patient ID:</span> <span id="rxID">________________</span></div>
-            <div><span>Date:</span> <span id="rxDate">________________</span></div>
-            <div class="full"><span>Address:</span> <span id="rxAddress">________________</span></div>
-          </div>
-
-          <div class="rx-symbol-box">R<sub>x</sub></div>
-
-          <div class="rx-section-block">
-            <div class="rx-section-heading">Case History & Complaints</div>
-            <div id="rxCaseDetails" style="font-size:11px; line-height:1.4;">No case history recorded.</div>
-          </div>
-
-          <div class="rx-section-block">
-            <div class="rx-section-heading">Investigations</div>
-            <div id="rxInvDetails" style="font-size:11px;">No investigation records.</div>
-          </div>
-
-          <div class="rx-section-block">
-            <div class="rx-section-heading">Prescribed Medicines (Date-wise)</div>
-            <div id="rxMedsDetails">No medicines prescribed.</div>
-          </div>
+        <div class="rx-logo-badge">
+          <div style="font-size:24px;">⚕</div>
+          <div style="font-size:9px;">NABH</div>
         </div>
       </div>
 
-      <div class="rx-footer-bar">
-        Note: Take medicines as prescribed. Keep out of reach of children. | Professional Medical Record
+      <!-- Patient Details Header Row -->
+      <div class="rx-patient-details-box">
+        <div><span>Patient Name:</span> <span id="rxName">________________</span></div>
+        <div><span>Age:</span> <span id="rxAge">____</span></div>
+        <div><span>Sex:</span> <span id="rxSex">____</span></div>
+        <div><span>Patient ID:</span> <span id="rxID">________________</span></div>
+        <div><span>Date:</span> <span id="rxDate">________________</span></div>
+        <div><span>Mobile:</span> <span id="rxMobile">________________</span></div>
+        <div style="grid-column: span 3;"><span>Address:</span> <span id="rxAddress">________________</span></div>
+      </div>
+
+      <!-- Main Body Area -->
+      <div class="rx-body-section">
+        <svg class="rx-watermark-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M4.8 2.3A.3.3 0 0 0 4.5 2.6V7a5 5 0 0 0 10 0V2.6a.3.3 0 0 0-.3-.3h-.4a.3.3 0 0 0-.3.3V7a4 4 0 0 1-8 0V2.6a.3.3 0 0 0-.3-.3h-.4z"/>
+          <path d="M9.5 12a4.5 4.5 0 0 0 4.5 4.5h1a4.5 4.5 0 0 0 4.5-4.5v-2a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v2a2.5 2.5 0 0 1-2.5 2.5h-1A2.5 2.5 0 0 1 11.5 12"/>
+        </svg>
+
+        <div class="rx-symbol-rx">R<sub>x</sub></div>
+
+        <div class="rx-content-group">
+          <div class="rx-block-title">Case History & Symptoms</div>
+          <div id="rxCaseDetails" style="font-size:11px; line-height:1.4;">No case history recorded.</div>
+        </div>
+
+        <div class="rx-content-group">
+          <div class="rx-block-title">Investigations</div>
+          <div id="rxInvDetails" style="font-size:11px;">No investigation records.</div>
+        </div>
+
+        <div class="rx-content-group">
+          <div class="rx-block-title">Prescribed Medicines (Date-wise)</div>
+          <div id="rxMedsDetails">No medicines prescribed.</div>
+        </div>
+      </div>
+
+      <!-- Footer Banner -->
+      <div class="rx-footer-banner">
+        <span>मिलने का समय - सुबह 9 से 2, शाम 5 से 8 बजे तक</span>
+        <span>Not Valid For Medico Legal Purpose</span>
+        <span>24x7 इमरजेंसी सेवा उपलब्ध है।</span>
       </div>
     </div>
   </div>
@@ -929,9 +973,11 @@ async function loadPrescriptionData() {
     if (!p) throw new Error("Patient information not found.");
 
     document.getElementById("rxName").textContent = p.Patient_Name || "N/A";
-    document.getElementById("rxAgeSex").textContent = (p.Age || "N/A") + " / " + (p.Gender || "N/A");
+    document.getElementById("rxAge").textContent = p.Age || "N/A";
+    document.getElementById("rxSex").textContent = p.Gender || "N/A";
     document.getElementById("rxDate").textContent = new Date().toLocaleDateString('en-GB');
     document.getElementById("rxID").textContent = p.Patient_ID;
+    document.getElementById("rxMobile").textContent = p.Mobile || "N/A";
     document.getElementById("rxAddress").textContent = p.Address || "N/A";
 
     // Case Details
@@ -939,9 +985,9 @@ async function loadPrescriptionData() {
     if (cases.length > 0) {
       const latestCase = cases[cases.length - 1];
       document.getElementById("rxCaseDetails").innerHTML = `
-        <p style="margin:4px 0;"><b>Chief Complaint:</b> ${escapeHTML(latestCase.Chief_Complaint || "N/A")} (${escapeHTML(latestCase.Complaint_Duration || "")})</p>
-        <p style="margin:4px 0;"><b>Symptoms:</b> ${escapeHTML(latestCase.Physical_Symptoms || "")} ${escapeHTML(latestCase.Mental_Symptoms || "")}</p>
-        <p style="margin:4px 0;"><b>History:</b> Past: ${escapeHTML(latestCase.Past_History || "None")} | Family: ${escapeHTML(latestCase.Family_History || "None")}</p>
+        <p style="margin:3px 0;"><b>Chief Complaint:</b> ${escapeHTML(latestCase.Chief_Complaint || "N/A")} (${escapeHTML(latestCase.Complaint_Duration || "")})</p>
+        <p style="margin:3px 0;"><b>Symptoms:</b> ${escapeHTML(latestCase.Physical_Symptoms || "")} ${escapeHTML(latestCase.Mental_Symptoms || "")}</p>
+        <p style="margin:3px 0;"><b>History:</b> Past: ${escapeHTML(latestCase.Past_History || "None")} | Family: ${escapeHTML(latestCase.Family_History || "None")}</p>
       `;
     } else {
       document.getElementById("rxCaseDetails").innerHTML = "<p>No recorded case history.</p>";
@@ -969,9 +1015,9 @@ async function loadPrescriptionData() {
 
       let medHtml = "";
       Object.keys(groupedMeds).reverse().forEach(dateKey => {
-        medHtml += `<div style="font-size:11px; font-weight:bold; color:#073b43; margin-top:6px;">Date: ${escapeHTML(dateKey)}</div>`;
+        medHtml += `<div style="font-size:11px; font-weight:bold; color:#4c1d95; margin-top:5px;">Prescribed Date: ${escapeHTML(dateKey)}</div>`;
         medHtml += `
-          <table class="rx-medicines-table">
+          <table class="rx-table-custom">
             <thead>
               <tr>
                 <th>Medicine Name</th>
