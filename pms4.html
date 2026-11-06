@@ -275,7 +275,7 @@ tr:hover { background:#f8fbfc; }
   <div class="panel">
     <div class="form-group full" style="margin-bottom:15px;">
       <label>Google Gemini API Key / Token *</label>
-      <input type="password" id="geminiApiKey" placeholder="AQ.Ab8RN6IOtcfXO3J3R3G6PB-KvUh1uJPBvsKKD0FsNDmpPY6OBA">
+      <input type="password" id="geminiApiKey" placeholder="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">
       <small style="color:var(--muted);">Your key stays secure in your browser.</small>
     </div>
     
@@ -773,14 +773,15 @@ async function autoFetchPatientCase() {
 }
 
 async function generateAiRemedy() {
+async function generateAiRemedy() {
   const apiKey = document.getElementById("geminiApiKey").value.trim();
-  if (!apiKey) return notify("Please enter your Gemini API Key or Token first!", true);
+  if (!apiKey) return notify("Kripya pehle apni OpenAI API Key enter karein!", true);
 
   const complaint = document.getElementById("aiComplaint").value;
   const symptoms = document.getElementById("aiSymptoms").value;
   const history = document.getElementById("aiHistory").value;
 
-  if (!complaint && !symptoms) return notify("Please fill in complaints or symptoms", true);
+  if (!complaint && !symptoms) return notify("Kripya chief complaint ya symptoms bharein", true);
 
   const prompt = `
 Act as an expert Homeopathic Physician and Repertory Specialist.
@@ -802,35 +803,29 @@ Output format:
   try {
     showLoader(true);
     
-    // Dynamic endpoint & header mapping for AQ and AIzaSy credentials
-    let url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
-    const headers = { 
-      'Content-Type': 'application/json'
-    };
-
-    if (apiKey.startsWith("AQ.")) {
-      // AQ Tokens require dual header pass for Google Cloud Web Studio endpoints
-      headers['x-goog-api-key'] = apiKey;
-      headers['Authorization'] = `Bearer ${apiKey}`;
-    } else {
-      url += `?key=${apiKey}`;
-    }
-
-    const response = await fetch(url, {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: 'POST',
-      headers: headers,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
+        model: "gpt-4o-mini", // Aap chhein toh "gpt-4o" bhi use kar sakte hain
+        messages: [
+          { role: "system", content: "You are an expert homeopathic physician." },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.7
       })
     });
 
     const data = await response.json();
     if (data.error) throw new Error(data.error.message);
 
-    const resultText = data.candidates[0].content.parts[0].text;
+    const resultText = data.choices[0].message.content;
     document.getElementById("aiSuggestionText").textContent = resultText;
     document.getElementById("aiResultBox").style.display = "block";
-    notify("AI Remedy generated successfully!");
+    notify("AI Remedy OpenAI se successfully generate ho gayi!");
 
   } catch (err) {
     notify(err.message, true);
