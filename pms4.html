@@ -774,7 +774,7 @@ async function autoFetchPatientCase() {
 
 async function generateAiRemedy() {
   const apiKey = document.getElementById("geminiApiKey").value.trim();
-  if (!apiKey) return notify("Please enter your Gemini API key or token first!", true);
+  if (!apiKey) return notify("Please enter your Gemini API Key or Token first!", true);
 
   const complaint = document.getElementById("aiComplaint").value;
   const symptoms = document.getElementById("aiSymptoms").value;
@@ -802,11 +802,15 @@ Output format:
   try {
     showLoader(true);
     
-    // Yahan hum endpoint aur headers ko token ke mutabiq adjust kar rahe hain
-    let url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
-    const headers = { 'Content-Type': 'application/json' };
+    // Dynamic endpoint & header mapping for AQ and AIzaSy credentials
+    let url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+    const headers = { 
+      'Content-Type': 'application/json'
+    };
 
     if (apiKey.startsWith("AQ.")) {
+      // AQ Tokens require dual header pass for Google Cloud Web Studio endpoints
+      headers['x-goog-api-key'] = apiKey;
       headers['Authorization'] = `Bearer ${apiKey}`;
     } else {
       url += `?key=${apiKey}`;
