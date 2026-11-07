@@ -274,9 +274,9 @@ tr:hover { background:#f8fbfc; }
   <h2 class="page-title">🤖 AI Homeopathic Remedy Prescriber</h2>
   <div class="panel">
     <div class="form-group full" style="margin-bottom:15px;">
-      <label>Google Gemini API Token *</label>
-      <input type="password" id="geminiApiKey" value="AQ.Ab8RN6KxbxdCigSp2LplApAjW0hHxIkJHsY55kXESo5kvi2bpg">
-      <small style="color:var(--muted);">Your token stays secure through server proxy.</small>
+      <label>OpenRouter API Key *</label>
+      <input type="password" id="geminiApiKey" placeholder="sk-or-v1-...">
+      <small style="color:var(--muted);">Paste your OpenRouter API Key (sk-or-v1-...)</small>
     </div>
     
     <div class="form-grid">
@@ -531,7 +531,7 @@ tr:hover { background:#f8fbfc; }
 </div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbz4lBkqObL7n3hp3Klu9dnXZ0p697e2817G0uktA65q6JYN2JPRRF7wxA3mQHK5k8x5/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbznQSMH3gWInIyE3KukUwAtFBXRig7VJy_M99qlGq0_y2WGshfno7mDI2hyXActqot3/exec";
 
 let allPatients = [];
 let allInventory = [];
@@ -750,7 +750,7 @@ async function viewPatient(id) {
 
 function closeModal() { document.getElementById("patientModal").style.display = "none"; }
 
-/* AI PRESCRIBER LOGIC (Gemini AQ Token Proxy via Apps Script) */
+/* AI PRESCRIBER LOGIC (OpenRouter AI via Apps Script) */
 async function autoFetchPatientCase() {
   const patientId = document.getElementById("aiPatientSelect").value;
   if (!patientId) return;
@@ -774,7 +774,7 @@ async function autoFetchPatientCase() {
 
 async function generateAiRemedy() {
   const apiKey = document.getElementById("geminiApiKey").value.trim();
-  if (!apiKey) return notify("Kripya pehle apna Gemini API Token enter karein!", true);
+  if (!apiKey) return notify("Kripya pehle apni OpenRouter API Key enter karein!", true);
 
   const complaint = document.getElementById("aiComplaint").value;
   const symptoms = document.getElementById("aiSymptoms").value;
@@ -804,7 +804,7 @@ Output format:
     const res = await api("getAiRemedy", { apiKey: apiKey, prompt: prompt });
     document.getElementById("aiSuggestionText").textContent = res.result;
     document.getElementById("aiResultBox").style.display = "block";
-    notify("AI Remedy Gemini se successfully generate ho gayi!");
+    notify("AI Remedy successfully generate ho gayi!");
   } catch (err) {
     notify(err.message, true);
   } finally {
