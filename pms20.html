@@ -273,12 +273,6 @@ tr:hover { background:#f8fbfc; }
 <section class="page" id="aiDoctor">
   <h2 class="page-title">🤖 AI Homeopathic Remedy Prescriber</h2>
   <div class="panel">
-    <div class="form-group full" style="margin-bottom:15px;">
-      <label>OpenRouter API Key *</label>
-      <input type="password" id="geminiApiKey" placeholder="sk-or-v1-...">
-      <small style="color:var(--muted);">Paste your OpenRouter API Key (sk-or-v1-...)</small>
-    </div>
-    
     <div class="form-grid">
       <div class="form-group full">
         <label>Select Patient *</label>
@@ -531,7 +525,7 @@ tr:hover { background:#f8fbfc; }
 </div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbznQSMH3gWInIyE3KukUwAtFBXRig7VJy_M99qlGq0_y2WGshfno7mDI2hyXActqot3/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbx6_hzWTlXoxnypW93FlgHOe8bBS9FwploSr7L81O8pFlOsZk2YiRcRhDet_BhJ78VW/exec";
 
 let allPatients = [];
 let allInventory = [];
@@ -750,7 +744,7 @@ async function viewPatient(id) {
 
 function closeModal() { document.getElementById("patientModal").style.display = "none"; }
 
-/* AI PRESCRIBER LOGIC (OpenRouter AI via Apps Script) */
+/* AI PRESCRIBER LOGIC (Auto OpenRouter Backend) */
 async function autoFetchPatientCase() {
   const patientId = document.getElementById("aiPatientSelect").value;
   if (!patientId) return;
@@ -773,9 +767,6 @@ async function autoFetchPatientCase() {
 }
 
 async function generateAiRemedy() {
-  const apiKey = document.getElementById("geminiApiKey").value.trim();
-  if (!apiKey) return notify("Kripya pehle apni OpenRouter API Key enter karein!", true);
-
   const complaint = document.getElementById("aiComplaint").value;
   const symptoms = document.getElementById("aiSymptoms").value;
   const history = document.getElementById("aiHistory").value;
@@ -801,7 +792,7 @@ Output format:
 
   try {
     showLoader(true);
-    const res = await api("getAiRemedy", { apiKey: apiKey, prompt: prompt });
+    const res = await api("getAiRemedy", { prompt: prompt });
     document.getElementById("aiSuggestionText").textContent = res.result;
     document.getElementById("aiResultBox").style.display = "block";
     notify("AI Remedy successfully generate ho gayi!");
